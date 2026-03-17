@@ -8,6 +8,14 @@ version 17
 capture confirm file "${analysis_data}"
 if _rc {
     do "replication/01_config.do"
+    do "replication/02_build_teacher_year_analysis.do"
+}
+
+capture confirm file "${analysis_data}"
+if _rc {
+    do "replication/utils/record_unavailable_analysis.do" "04_prepare" "teacher_outcome_prep" "${analysis_data}" "analysis_data_missing_after_build"
+    di as error "Missing analysis dataset: ${analysis_data}"
+    exit 601
 }
 
 use "${analysis_data}", clear
@@ -111,6 +119,10 @@ gen ${incumbent_var} = !missing(${y_stay_school})
 
 capture confirm variable ${entrant_var}
 if _rc {
+    by ${id_teacher}: egen __first_obs_year = min(${year_var})
+    gen ${entrant_var} = (${year_var} == __first_obs_year) if !missing(__first_obs_year)
+    drop __first_obs_year
+
     local incoming_avail ""
     foreach y of global outcomes_entrant {
         capture confirm variable `y'
@@ -120,11 +132,8 @@ if _rc {
     }
     if "`incoming_avail'" != "" {
         egen __incoming_nonmiss = rownonmiss(`incoming_avail')
-        gen ${entrant_var} = (__incoming_nonmiss > 0)
+        replace ${entrant_var} = 1 if __incoming_nonmiss > 0
         drop __incoming_nonmiss
-    }
-    else {
-        gen ${entrant_var} = .
     }
 }
 

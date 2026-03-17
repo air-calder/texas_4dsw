@@ -9,8 +9,18 @@ version 17
 global project_root "`c(pwd)'"
 global rep_root "${project_root}/replication"
 global rep_output "${rep_root}/output"
-global analysis_data "${project_root}/data/clean/teacher_year_analysis.dta"
+
+* Cleaned inputs from Code/ pipeline
+global clean_data_dir "${project_root}/data/clean"
+global clean_teacher_file "${clean_data_dir}/teacher_background.dta"
+global clean_calendar_file "${clean_data_dir}/yearly_tracker_merge.dta"
+global clean_rural_file "${clean_data_dir}/ccd_district_weighted.dta"
+global clean_vam_prefix "${clean_data_dir}/vam_data_idsgroup"
+
+* Replication working files
+global analysis_data "${rep_output}/intermediate/teacher_year_analysis.dta"
 global prepared_data "${rep_output}/intermediate/teacher_year_prepared.dta"
+global unavailable_tally "${rep_output}/checks/unavailable_analyses.csv"
 
 * Output folders
 capture mkdir "${rep_output}"
@@ -22,8 +32,8 @@ capture mkdir "${rep_output}/figures"
 capture mkdir "${rep_output}/logs"
 
 * Analysis windows
-global analysis_start_year 2011
-global analysis_end_year 2025
+global analysis_start_year 2017
+global analysis_end_year 2024
 global baseline_end_year 2019
 global pretrend_end_year 2019
 global event_min -3
