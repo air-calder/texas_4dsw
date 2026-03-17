@@ -16,8 +16,18 @@ capture mkdir "${rep_output}/tables"
 
 capture confirm variable ${entrant_var}
 if _rc {
+    do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "${entrant_var}" "entrant_flag_missing"
     file open fh using "${rep_output}/tables/teacher_entrant_note.txt", write replace
     file write fh "Entrant sample variable ${entrant_var} is missing; entrant models skipped." _n
+    file close fh
+    exit
+}
+
+quietly count if ${entrant_var} == 1
+if r(N) == 0 {
+    do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "${entrant_var}" "entrant_sample_has_zero_rows"
+    file open fh using "${rep_output}/tables/teacher_entrant_note.txt", write replace
+    file write fh "Entrant sample variable ${entrant_var} has zero entrant observations; entrant models skipped." _n
     file close fh
     exit
 }
@@ -36,7 +46,16 @@ postfile `posth' str30 spec str40 outcome double coef se pvalue long N using "`r
 
 foreach y of global outcomes_entrant {
     capture confirm variable `y'
-    if _rc == 0 {
+    if _rc {
+        do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "`y'" "entrant_outcome_missing"
+    }
+    else {
+        quietly count if ${entrant_var} == 1 & !missing(`y')
+        if r(N) == 0 {
+            do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "`y'" "entrant_outcome_all_missing_in_sample"
+            continue
+        }
+
         capture noisily areg `y' ${treat_var} i.${year_var} if ${entrant_var} == 1 & !missing(`y'), absorb(${id_school}) vce(cluster ${id_district})
         if _rc == 0 {
             local b = _b[${treat_var}]

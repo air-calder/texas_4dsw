@@ -1,36 +1,36 @@
-concept,current_variable_name,required,notes
-teacher_id,teacher_id,yes,Unique teacher identifier
-school_year,school_year,yes,Numeric school year
-school_id,school_id,yes,Current school in year t
-district_id,district_id,yes,Current district in year t
-adopt_year,adopt_year,yes,First 4DSW adoption year for current district
-treated,treated,yes,1 if treated in current year
-ever_treated,ever_treated,yes,1 if ever treated in panel
-event_time,event_time,yes,school_year - adopt_year
-matched_sample,matched_sample,no,1 if in matched sample
-rural,rural,no,1 if rural school/district
-hybrid_calendar,hybrid_calendar,no,1 if hybrid four-day implementation
-adjacent_to_treated,adjacent_to_treated,no,1 if adjacent control to treated district
-fte,fte,no,Used for duplicate resolution if duplicate teacher-year rows exist
-experience,experience,no,Years of teaching experience
-female,female,no,Teacher gender indicator
-certified,certified,no,Teacher certification indicator
-salary,salary,no,Teacher salary
-class_size,class_size,no,Classroom size control
-class_frpl_share,class_frpl_share,no,Classroom FRPL share control
-class_nonwhite_share,class_nonwhite_share,no,Classroom nonwhite share control
-class_prior_ach,class_prior_ach,no,Classroom prior achievement control
-stay_school_t1,stay_school_t1,derived,Primary retention outcome
-stay_district_t1,stay_district_t1,derived,Secondary retention outcome
-switch_district_t1,switch_district_t1,derived,Teacher switches district by t+1
-exit_tx_public_t1,exit_tx_public_t1,derived,Teacher not observed in TX public by t+1
-observed_t1,observed_t1,derived,Teacher observed in t+1
-turnover_teacher_t1,turnover_teacher_t1,derived,1 - stay_school_t1
-is_incumbent,is_incumbent,derived,1 if retention outcomes defined
-is_entrant,is_entrant,no/derived,Entrant-sample flag for sorting models
-incoming_from_tx,incoming_from_tx,no,Entrant from another TX district
-incoming_first_time,incoming_first_time,no,Entrant first-time teacher
-incoming_alt_path,incoming_alt_path,no,Entrant from alternate pathway
-incoming_experience,incoming_experience,no,Entrant years of experience
-incoming_adv_degree,incoming_adv_degree,no,Entrant has advanced degree
-incoming_no_degree,incoming_no_degree,no,Entrant has no degree
+concept,analysis_variable,source_in_clean_outputs,required,notes
+teacher_id,teacher_id,id2 (teacher_background),yes,Unique teacher identifier
+school_year,school_year,syear (teacher_background),yes,Numeric school year
+school_id,school_id,campus (teacher_background),yes,Current school in year t
+district_id,district_id,district (teacher_background),yes,Current district in year t
+adopt_year,adopt_year,firstyear (yearly_tracker_merge),yes,First 4DSW adoption year for district/campus
+treated,treated,post_adoption (yearly_tracker_merge),yes,1 if treated in current year
+ever_treated,ever_treated,ever4DSW (yearly_tracker_merge),yes,1 if ever treated in panel
+event_time,event_time,derived from school_year - adopt_year,yes,Relative treatment timing
+matched_sample,matched_sample,derived default = 1,no,1 if in matched sample
+rural,rural,user-supplied optional,no,1 if rural school/district
+hybrid_calendar,hybrid_calendar,user-supplied optional,no,1 if hybrid four-day implementation
+adjacent_to_treated,adjacent_to_treated,user-supplied optional,no,1 if adjacent control district
+fte,fte,fte (teacher_background if present),no,Used for duplicate resolution
+experience,experience,exper (teacher_background),no,Years of teaching experience
+female,female,derived from sex when available,no,Teacher gender indicator
+certified,certified,ever_cert/tier1-3 (teacher_background),no,Teacher certification indicator
+salary,salary,user-supplied optional,no,Teacher salary
+class_size,class_size,user-supplied optional,no,Classroom size control
+class_frpl_share,class_frpl_share,user-supplied optional,no,Classroom FRPL share control
+class_nonwhite_share,class_nonwhite_share,user-supplied optional,no,Classroom nonwhite share control
+class_prior_ach,class_prior_ach,user-supplied optional,no,Classroom prior achievement control
+stay_school_t1,stay_school_t1,derived in 04_prepare,derived,Primary retention outcome
+stay_district_t1,stay_district_t1,derived in 04_prepare,derived,Secondary retention outcome
+switch_district_t1,switch_district_t1,derived in 04_prepare,derived,Teacher switches district by t+1
+exit_tx_public_t1,exit_tx_public_t1,derived in 04_prepare,derived,Teacher not observed in TX public by t+1
+observed_t1,observed_t1,derived in 04_prepare,derived,Teacher observed in t+1
+turnover_teacher_t1,turnover_teacher_t1,derived in 04_prepare,derived,1 - stay_school_t1
+is_incumbent,is_incumbent,derived in 04_prepare,derived,1 if retention outcomes defined
+is_entrant,is_entrant,derived in 04_prepare when missing,no/derived,Entrant-sample flag for sorting models
+incoming_from_tx,incoming_from_tx,user-supplied optional,no,Entrant from another TX district
+incoming_first_time,incoming_first_time,user-supplied optional,no,Entrant first-time teacher
+incoming_alt_path,incoming_alt_path,user-supplied optional,no,Entrant from alternate pathway
+incoming_experience,incoming_experience,user-supplied optional,no,Entrant years of experience
+incoming_adv_degree,incoming_adv_degree,user-supplied optional,no,Entrant has advanced degree
+incoming_no_degree,incoming_no_degree,user-supplied optional,no,Entrant has no degree
