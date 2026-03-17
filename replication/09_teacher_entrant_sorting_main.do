@@ -1,39 +1,40 @@
 /*
 Description: Main entrant/sorting models at teacher-year level.
-Runs on entrant sample only.
+Run from project root.
 */
 
 version 17
 
-capture confirm file "${prepared_data}"
+local prepared_data "replication/output/intermediate/teacher_year_prepared.dta"
+
+capture confirm file "`prepared_data'"
 if _rc {
-    do "replication/01_config.do"
     do "replication/04_prepare_teacher_outcomes.do"
 }
 
-use "${prepared_data}", clear
-capture mkdir "${rep_output}/tables"
+use "`prepared_data'", clear
+capture mkdir "replication/output/tables"
 
-capture confirm variable ${entrant_var}
+capture confirm variable is_entrant
 if _rc {
-    do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "${entrant_var}" "entrant_flag_missing"
-    file open fh using "${rep_output}/tables/teacher_entrant_note.txt", write replace
-    file write fh "Entrant sample variable ${entrant_var} is missing; entrant models skipped." _n
+    do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "is_entrant" "entrant_flag_missing"
+    file open fh using "replication/output/tables/teacher_entrant_note.txt", write replace
+    file write fh "Entrant sample variable is_entrant is missing; entrant models skipped." _n
     file close fh
     exit
 }
 
-quietly count if ${entrant_var} == 1
+quietly count if is_entrant == 1
 if r(N) == 0 {
-    do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "${entrant_var}" "entrant_sample_has_zero_rows"
-    file open fh using "${rep_output}/tables/teacher_entrant_note.txt", write replace
-    file write fh "Entrant sample variable ${entrant_var} has zero entrant observations; entrant models skipped." _n
+    do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "is_entrant" "entrant_sample_has_zero_rows"
+    file open fh using "replication/output/tables/teacher_entrant_note.txt", write replace
+    file write fh "Entrant sample variable is_entrant has zero entrant observations; entrant models skipped." _n
     file close fh
     exit
 }
 
 local tcontrols ""
-foreach x of global teacher_controls_candidates {
+foreach x in female certified exper salary fte {
     capture confirm variable `x'
     if _rc == 0 {
         local tcontrols "`tcontrols' `x'"
@@ -44,22 +45,22 @@ tempfile results
 tempname posth
 postfile `posth' str30 spec str40 outcome double coef se pvalue long N using "`results'", replace
 
-foreach y of global outcomes_entrant {
+foreach y in incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
     capture confirm variable `y'
     if _rc {
         do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "`y'" "entrant_outcome_missing"
     }
     else {
-        quietly count if ${entrant_var} == 1 & !missing(`y')
+        quietly count if is_entrant == 1 & !missing(`y')
         if r(N) == 0 {
             do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "`y'" "entrant_outcome_all_missing_in_sample"
             continue
         }
 
-        capture noisily areg `y' ${treat_var} i.${year_var} if ${entrant_var} == 1 & !missing(`y'), absorb(${id_school}) vce(cluster ${id_district})
+        capture noisily areg `y' post_adoption i.syear if is_entrant == 1 & !missing(`y'), absorb(campus) vce(cluster district)
         if _rc == 0 {
-            local b = _b[${treat_var}]
-            local s = _se[${treat_var}]
+            local b = _b[post_adoption]
+            local s = _se[post_adoption]
             local z = `b' / `s'
             local p = 2 * normal(-abs(`z'))
             local n = e(N)
@@ -67,10 +68,10 @@ foreach y of global outcomes_entrant {
         }
 
         if "`tcontrols'" != "" {
-            capture noisily areg `y' ${treat_var} `tcontrols' i.${year_var} if ${entrant_var} == 1 & !missing(`y'), absorb(${id_school}) vce(cluster ${id_district})
+            capture noisily areg `y' post_adoption `tcontrols' i.syear if is_entrant == 1 & !missing(`y'), absorb(campus) vce(cluster district)
             if _rc == 0 {
-                local b = _b[${treat_var}]
-                local s = _se[${treat_var}]
+                local b = _b[post_adoption]
+                local s = _se[post_adoption]
                 local z = `b' / `s'
                 local p = 2 * normal(-abs(`z'))
                 local n = e(N)
@@ -83,4 +84,4 @@ postclose `posth'
 
 use "`results'", clear
 sort outcome spec
-export delimited using "${rep_output}/tables/teacher_entrant_main.csv", replace
+export delimited using "replication/output/tables/teacher_entrant_main.csv", replace

@@ -1,46 +1,46 @@
 /*
-Description: Prepare teacher-year analysis file with defensive transition outcomes.
-Computes t+1 outcomes even if precomputed versions already exist.
+Description: Prepare teacher-year analysis file with t+1 transition outcomes.
+Run from project root.
 */
 
 version 17
 
-capture confirm file "${analysis_data}"
+local analysis_data "replication/output/intermediate/teacher_year_analysis.dta"
+local prepared_data "replication/output/intermediate/teacher_year_prepared.dta"
+
+capture confirm file "`analysis_data'"
 if _rc {
-    do "replication/01_config.do"
     do "replication/02_build_teacher_year_analysis.do"
 }
 
-capture confirm file "${analysis_data}"
+capture confirm file "`analysis_data'"
 if _rc {
-    do "replication/utils/record_unavailable_analysis.do" "04_prepare" "teacher_outcome_prep" "${analysis_data}" "analysis_data_missing_after_build"
-    di as error "Missing analysis dataset: ${analysis_data}"
+    do "replication/utils/record_unavailable_analysis.do" "04_prepare" "teacher_outcome_prep" "`analysis_data'" "analysis_data_missing_after_build"
+    di as error "Missing analysis dataset: `analysis_data'"
     exit 601
 }
 
-use "${analysis_data}", clear
+use "`analysis_data'", clear
 
-capture mkdir "${rep_output}/intermediate"
-capture mkdir "${rep_output}/checks"
+capture mkdir "replication/output/intermediate"
+capture mkdir "replication/output/checks"
 
-* Restrict to configured analysis years.
-keep if inrange(${year_var}, ${analysis_start_year}, ${analysis_end_year})
+keep if inrange(syear, 2017, 2024)
 
-* Resolve duplicate teacher-year rows (max FTE wins if available).
 quietly count
 local n_before = r(N)
 
-capture noisily isid ${id_teacher} ${year_var}
+capture noisily isid id2 syear
 if _rc {
     gen __orig_order = _n
-    capture confirm variable ${fte_var}
+    capture confirm variable fte
     if _rc == 0 {
-        gsort ${id_teacher} ${year_var} -${fte_var} __orig_order
+        gsort id2 syear -fte __orig_order
     }
     else {
-        sort ${id_teacher} ${year_var} __orig_order
+        sort id2 syear __orig_order
     }
-    by ${id_teacher} ${year_var}: keep if _n == 1
+    by id2 syear: keep if _n == 1
     drop __orig_order
 }
 
@@ -53,11 +53,10 @@ set obs 1
 gen rows_before = `n_before'
 gen rows_after = `n_after'
 gen rows_dropped = rows_before - rows_after
-export delimited using "${rep_output}/checks/duplicate_resolution.csv", replace
+export delimited using "replication/output/checks/duplicate_resolution.csv", replace
 restore
 
-* Save precomputed transition variables for mismatch checks if they exist.
-local trans_vars "${y_observed_t1} ${y_stay_school} ${y_stay_district} ${y_switch_district} ${y_exit_public}"
+local trans_vars "observed_t1 stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1"
 foreach v of local trans_vars {
     capture confirm variable `v'
     if _rc == 0 {
@@ -66,65 +65,62 @@ foreach v of local trans_vars {
     }
 }
 
-* Build treatment timing if missing.
-capture confirm variable ${ever_treat_var}
+capture confirm variable ever4DSW
 if _rc {
-    gen ${ever_treat_var} = !missing(${adopt_year_var})
+    gen ever4DSW = !missing(firstyear)
 }
 
-capture confirm variable ${treat_var}
+capture confirm variable post_adoption
 if _rc {
-    gen ${treat_var} = (${year_var} >= ${adopt_year_var}) if !missing(${adopt_year_var})
-    replace ${treat_var} = 0 if missing(${treat_var})
+    gen post_adoption = (syear >= firstyear) if !missing(firstyear)
+    replace post_adoption = 0 if missing(post_adoption)
 }
 
-capture confirm variable ${event_time_var}
+capture confirm variable event_time
 if _rc {
-    gen ${event_time_var} = ${year_var} - ${adopt_year_var} if !missing(${adopt_year_var})
+    gen event_time = syear - firstyear if !missing(firstyear)
 }
 
-* Build transition outcomes from t to t+1.
-sort ${id_teacher} ${year_var}
-by ${id_teacher}: gen __next_year = ${year_var}[_n+1]
-by ${id_teacher}: gen __next_school = ${id_school}[_n+1]
-by ${id_teacher}: gen __next_district = ${id_district}[_n+1]
+sort id2 syear
+by id2: gen __next_year = syear[_n+1]
+by id2: gen __next_school = campus[_n+1]
+by id2: gen __next_district = district[_n+1]
 
-quietly summarize ${year_var}, meanonly
+quietly summarize syear, meanonly
 local max_year = r(max)
 
-capture drop ${y_observed_t1}
-gen ${y_observed_t1} = (__next_year == ${year_var} + 1) if ${year_var} < `max_year'
+capture drop observed_t1
+gen observed_t1 = (__next_year == syear + 1) if syear < `max_year'
 
-capture drop ${y_stay_school}
-gen ${y_stay_school} = (${y_observed_t1} == 1 & __next_school == ${id_school}) if ${year_var} < `max_year'
-replace ${y_stay_school} = 0 if ${year_var} < `max_year' & ${y_observed_t1} == 1 & __next_school != ${id_school}
+capture drop stay_school_t1
+gen stay_school_t1 = (observed_t1 == 1 & __next_school == campus) if syear < `max_year'
+replace stay_school_t1 = 0 if syear < `max_year' & observed_t1 == 1 & __next_school != campus
 
-capture drop ${y_stay_district}
-gen ${y_stay_district} = (${y_observed_t1} == 1 & __next_district == ${id_district}) if ${year_var} < `max_year'
-replace ${y_stay_district} = 0 if ${year_var} < `max_year' & ${y_observed_t1} == 1 & __next_district != ${id_district}
+capture drop stay_district_t1
+gen stay_district_t1 = (observed_t1 == 1 & __next_district == district) if syear < `max_year'
+replace stay_district_t1 = 0 if syear < `max_year' & observed_t1 == 1 & __next_district != district
 
-capture drop ${y_switch_district}
-gen ${y_switch_district} = (${y_observed_t1} == 1 & __next_district != ${id_district}) if ${year_var} < `max_year'
-replace ${y_switch_district} = 0 if ${year_var} < `max_year' & ${y_observed_t1} == 1 & __next_district == ${id_district}
+capture drop switch_district_t1
+gen switch_district_t1 = (observed_t1 == 1 & __next_district != district) if syear < `max_year'
+replace switch_district_t1 = 0 if syear < `max_year' & observed_t1 == 1 & __next_district == district
 
-capture drop ${y_exit_public}
-gen ${y_exit_public} = (${y_observed_t1} == 0) if ${year_var} < `max_year'
+capture drop exit_tx_public_t1
+gen exit_tx_public_t1 = (observed_t1 == 0) if syear < `max_year'
 
-capture drop ${y_turnover_teacher}
-gen ${y_turnover_teacher} = 1 - ${y_stay_school} if !missing(${y_stay_school})
+capture drop turnover_teacher_t1
+gen turnover_teacher_t1 = 1 - stay_school_t1 if !missing(stay_school_t1)
 
-* Incumbent and entrant flags.
-capture drop ${incumbent_var}
-gen ${incumbent_var} = !missing(${y_stay_school})
+capture drop is_incumbent
+gen is_incumbent = !missing(stay_school_t1)
 
-capture confirm variable ${entrant_var}
+capture confirm variable is_entrant
 if _rc {
-    by ${id_teacher}: egen __first_obs_year = min(${year_var})
-    gen ${entrant_var} = (${year_var} == __first_obs_year) if !missing(__first_obs_year)
+    by id2: egen __first_obs_year = min(syear)
+    gen is_entrant = (syear == __first_obs_year) if !missing(__first_obs_year)
     drop __first_obs_year
 
     local incoming_avail ""
-    foreach y of global outcomes_entrant {
+    foreach y in incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
         capture confirm variable `y'
         if _rc == 0 {
             local incoming_avail "`incoming_avail' `y'"
@@ -132,29 +128,27 @@ if _rc {
     }
     if "`incoming_avail'" != "" {
         egen __incoming_nonmiss = rownonmiss(`incoming_avail')
-        replace ${entrant_var} = 1 if __incoming_nonmiss > 0
+        replace is_entrant = 1 if __incoming_nonmiss > 0
         drop __incoming_nonmiss
     }
 }
 
-* Experience bins for heterogeneity if experience exists.
-capture confirm variable ${experience_var}
+capture confirm variable exper
 if _rc == 0 {
     capture confirm variable exp_le5
     if _rc {
-        gen exp_le5 = (${experience_var} <= 5) if !missing(${experience_var})
+        gen exp_le5 = (exper <= 5) if !missing(exper)
     }
     capture confirm variable exp_gt5
     if _rc {
-        gen exp_gt5 = (${experience_var} > 5) if !missing(${experience_var})
+        gen exp_gt5 = (exper > 5) if !missing(exper)
     }
     capture confirm variable exp_gt9
     if _rc {
-        gen exp_gt9 = (${experience_var} > 9) if !missing(${experience_var})
+        gen exp_gt9 = (exper > 9) if !missing(exper)
     }
 }
 
-* Mismatch audit against pre-existing transition variables.
 tempfile mm
 tempname mmpost
 postfile `mmpost' str40 variable long n_compared long n_mismatch double mismatch_share using "`mm'", replace
@@ -178,8 +172,9 @@ postclose `mmpost'
 
 preserve
 use "`mm'", clear
-export delimited using "${rep_output}/checks/transition_mismatch_audit.csv", replace
+export delimited using "replication/output/checks/transition_mismatch_audit.csv", replace
 restore
 
 drop __next_year __next_school __next_district
-save "${prepared_data}", replace
+sort id2 syear
+save "`prepared_data'", replace

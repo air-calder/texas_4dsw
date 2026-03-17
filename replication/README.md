@@ -3,7 +3,7 @@
 This folder contains a teacher-year replication pipeline for the two prior-literature papers. It now builds the analysis panel directly from cleaned outputs produced by scripts in `Code/`, then derives transition outcomes defensively.
 
 ### Scope
-- Builds one `teacher_id x school_year` panel from cleaned files in `data/clean/`.
+- Builds one `id2 x syear` panel from cleaned files in `data/clean/`.
 - Starts from cleaned outputs (no raw-data construction scripts).
 - Computes `t+1` mobility/retention outcomes in-script even if precomputed versions exist.
 - Includes main, event-study, heterogeneity, entrant, and robustness modules.
@@ -12,8 +12,10 @@ This folder contains a teacher-year replication pipeline for the two prior-liter
 ### Expected Input (from `Code/` cleaning pipeline)
 - `data/clean/teacher_background.dta`
 - `data/clean/yearly_tracker_merge.dta`
-- Update paths and variable names in `replication/01_config.do` if your cleaned files live elsewhere.
-- Variable naming template is in `replication/specs/variable_map_template.csv`.
+- Optional for additional controls/flags:
+  - `data/clean/vam_data_idsgroup1.dta` through `data/clean/vam_data_idsgroup4.dta`
+  - `data/clean/ccd_district_weighted.dta`
+- Scripts use `Code/` variable names directly (no replication config file).
 
 ### Run Order
 Run the master script from repo root:
@@ -23,20 +25,19 @@ do replication/00_master.do
 ```
 
 Or run modules manually in this order:
-1. `replication/01_config.do`
-2. `replication/02_build_teacher_year_analysis.do`
-3. `replication/04_prepare_teacher_outcomes.do`
-4. `replication/checks/01_data_integrity.do`
-5. `replication/checks/02_pretrend_checks.do`
-6. `replication/05_descriptives_teacher.do`
-7. `replication/06_teacher_retention_main.do`
-8. `replication/07_teacher_retention_eventstudy.do`
-9. `replication/08_teacher_retention_heterogeneity.do`
-10. `replication/09_teacher_entrant_sorting_main.do`
-11. `replication/10_teacher_entrant_eventstudy.do`
-12. `replication/11_teacher_robustness.do`
-13. `replication/12_tables_figures_teacher.do`
-14. `replication/13_unavailable_analyses_tally.do`
+1. `replication/02_build_teacher_year_analysis.do`
+2. `replication/04_prepare_teacher_outcomes.do`
+3. `replication/checks/01_data_integrity.do`
+4. `replication/checks/02_pretrend_checks.do`
+5. `replication/05_descriptives_teacher.do`
+6. `replication/06_teacher_retention_main.do`
+7. `replication/07_teacher_retention_eventstudy.do`
+8. `replication/08_teacher_retention_heterogeneity.do`
+9. `replication/09_teacher_entrant_sorting_main.do`
+10. `replication/10_teacher_entrant_eventstudy.do`
+11. `replication/11_teacher_robustness.do`
+12. `replication/12_tables_figures_teacher.do`
+13. `replication/13_unavailable_analyses_tally.do`
 
 ### Outputs
 - `replication/output/intermediate/`: prepared teacher-year file

@@ -8,11 +8,6 @@ version 17
 
 args module analysis missing_item reason
 
-capture confirm global unavailable_tally
-if _rc {
-    do "replication/01_config.do"
-}
-
 if "`module'" == "" {
     local module "unknown_module"
 }
@@ -26,8 +21,8 @@ if "`reason'" == "" {
     local reason "missing_or_unavailable_data"
 }
 
-capture mkdir "${rep_output}"
-capture mkdir "${rep_output}/checks"
+capture mkdir "replication/output"
+capture mkdir "replication/output/checks"
 
 local run_date = subinstr("`c(current_date)'", " ", "_", .)
 local run_time = subinstr("`c(current_time)'", ":", "-", .)
@@ -37,13 +32,13 @@ local analysis = subinstr("`analysis'", ",", ";", .)
 local missing_item = subinstr("`missing_item'", ",", ";", .)
 local reason = subinstr("`reason'", ",", ";", .)
 
-capture confirm file "${unavailable_tally}"
+capture confirm file "replication/output/checks/unavailable_analyses.csv"
 if _rc {
-    file open uf using "${unavailable_tally}", write replace text
+    file open uf using "replication/output/checks/unavailable_analyses.csv", write replace text
     file write uf "run_date,run_time,module,analysis,missing_item,reason" _n
 }
 else {
-    file open uf using "${unavailable_tally}", write append text
+    file open uf using "replication/output/checks/unavailable_analyses.csv", write append text
 }
 
 file write uf "`run_date',`run_time',`module',`analysis',`missing_item',`reason'" _n

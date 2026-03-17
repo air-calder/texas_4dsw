@@ -1,22 +1,22 @@
 /*
 Description: Main retention models at teacher-year level.
-Primary outcome is stay_school_t1.
+Run from project root.
 */
 
 version 17
 
-capture confirm file "${prepared_data}"
+local prepared_data "replication/output/intermediate/teacher_year_prepared.dta"
+
+capture confirm file "`prepared_data'"
 if _rc {
-    do "replication/01_config.do"
     do "replication/04_prepare_teacher_outcomes.do"
 }
 
-use "${prepared_data}", clear
-capture mkdir "${rep_output}/tables"
+use "`prepared_data'", clear
+capture mkdir "replication/output/tables"
 
-* Build available controls dynamically.
 local tcontrols ""
-foreach x of global teacher_controls_candidates {
+foreach x in female certified exper salary fte {
     capture confirm variable `x'
     if _rc == 0 {
         local tcontrols "`tcontrols' `x'"
@@ -24,7 +24,7 @@ foreach x of global teacher_controls_candidates {
 }
 
 local ccontrols ""
-foreach x of global classroom_controls_candidates {
+foreach x in class_size class_frpl_share class_nonwhite_share class_prior_ach {
     capture confirm variable `x'
     if _rc == 0 {
         local ccontrols "`ccontrols' `x'"
@@ -35,26 +35,24 @@ tempfile results
 tempname posth
 postfile `posth' str30 spec str40 outcome double coef se pvalue long N using "`results'", replace
 
-foreach y of global outcomes_retention_main {
+foreach y in stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 {
     capture confirm variable `y'
     if _rc == 0 {
-        * Baseline: school FE + year FE
-        capture noisily areg `y' ${treat_var} i.${year_var} if ${incumbent_var} == 1 & !missing(`y'), absorb(${id_school}) vce(cluster ${id_district})
+        capture noisily areg `y' post_adoption i.syear if is_incumbent == 1 & !missing(`y'), absorb(campus) vce(cluster district)
         if _rc == 0 {
-            local b = _b[${treat_var}]
-            local s = _se[${treat_var}]
+            local b = _b[post_adoption]
+            local s = _se[post_adoption]
             local z = `b' / `s'
             local p = 2 * normal(-abs(`z'))
             local n = e(N)
             post `posth' ("baseline") ("`y'") (`b') (`s') (`p') (`n')
         }
 
-        * + Teacher controls
         if "`tcontrols'" != "" {
-            capture noisily areg `y' ${treat_var} `tcontrols' i.${year_var} if ${incumbent_var} == 1 & !missing(`y'), absorb(${id_school}) vce(cluster ${id_district})
+            capture noisily areg `y' post_adoption `tcontrols' i.syear if is_incumbent == 1 & !missing(`y'), absorb(campus) vce(cluster district)
             if _rc == 0 {
-                local b = _b[${treat_var}]
-                local s = _se[${treat_var}]
+                local b = _b[post_adoption]
+                local s = _se[post_adoption]
                 local z = `b' / `s'
                 local p = 2 * normal(-abs(`z'))
                 local n = e(N)
@@ -62,13 +60,12 @@ foreach y of global outcomes_retention_main {
             }
         }
 
-        * + Teacher and classroom controls
         if "`tcontrols'" != "" | "`ccontrols'" != "" {
             local full_controls "`tcontrols' `ccontrols'"
-            capture noisily areg `y' ${treat_var} `full_controls' i.${year_var} if ${incumbent_var} == 1 & !missing(`y'), absorb(${id_school}) vce(cluster ${id_district})
+            capture noisily areg `y' post_adoption `full_controls' i.syear if is_incumbent == 1 & !missing(`y'), absorb(campus) vce(cluster district)
             if _rc == 0 {
-                local b = _b[${treat_var}]
-                local s = _se[${treat_var}]
+                local b = _b[post_adoption]
+                local s = _se[post_adoption]
                 local z = `b' / `s'
                 local p = 2 * normal(-abs(`z'))
                 local n = e(N)
@@ -81,4 +78,4 @@ postclose `posth'
 
 use "`results'", clear
 sort outcome spec
-export delimited using "${rep_output}/tables/teacher_retention_main.csv", replace
+export delimited using "replication/output/tables/teacher_retention_main.csv", replace
