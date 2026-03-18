@@ -57,7 +57,7 @@ Or run modules manually in this order:
 |---|---|---|---|
 | `data/clean/teacher_background.dta` | Available | `Code/teacher_background.do:135` | Explicitly saved by cleaning pipeline. |
 | `id2`, `syear`, `exper`, `first_cert_year`, `tier1`, `tier2`, `tier3`, `cert_alt`, `degree` | Available | `Code/teacher_background.do:45`, `Code/teacher_background.do:86`, `Code/teacher_background.do:104`, `Code/teacher_background.do:121` | Explicitly generated/kept or expected in teacher file used by replication. |
-| `district`, `campus`, `fte`, `totalpay`, `sex` | Likely available | `Code/teacher_background.do` employee records are carried through to final save | Not explicitly regenerated in script, but expected from source TEA employee files. |
+| `district`, `campus`, `fte`, `totalpay`, `sex` | Available | `Code/teacher_background.do` employee records are carried through to final save | Present in the teacher file used by replication. |
 | `certified` | Derivable | `first_cert_year` from `Code/teacher_background.do:104` | Replication defines `certified = (syear >= first_cert_year)`. |
 | `data/clean/yearly_tracker_merge.dta` | Available | `Code/calendar_clean.do:190` | Core treatment timing file. |
 | `firstyear`, `ever4DSW`, `post_adoption`, `pct_four` | Available | `Code/calendar_clean.do:155`, `Code/calendar_clean.do:179`, `Code/calendar_clean.do:182` | Used for treatment, event timing, and hybrid flag construction. |
