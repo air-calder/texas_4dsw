@@ -9,13 +9,13 @@ Suggested fields to fill:
 - School/district types included/excluded (rural-only, etc.)
 - Treatment definition details (full vs hybrid)
 - Handling of missing treatment timing
-- Handling of duplicate `teacher_id x school_year` rows
+- Handling of duplicate `id2 x syear` rows
 - Incumbent sample definition (`is_incumbent`)
 - Entrant sample definition (`is_entrant`)
 
 Current scaffold defaults:
-- Uses configured year window in `replication/01_config.do`.
-- Resolves duplicate teacher-year rows by keeping max `fte` row when `fte` exists; otherwise keeps first deterministic row.
+- Uses year window `2017-2024` in `replication/02_build_teacher_year_prepared.do`.
+- Requires unique `id2 x syear` teacher-year rows (`isid`); duplicate rows fail the run.
 - Main retention models run on `is_incumbent == 1`.
 - Entrant/sorting models run on `is_entrant == 1`.
-- Robustness includes optional rural-only, no-hybrid, and non-adjacent-control variants if those variables exist.
+- Robustness includes optional rural-only and no-hybrid variants if those variables exist.
