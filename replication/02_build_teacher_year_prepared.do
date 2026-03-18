@@ -10,7 +10,7 @@ capture mkdir "replication/output"
 capture mkdir "replication/output/intermediate"
 capture mkdir "replication/output/checks"
 
-* Teacher-year base from teacher_background.
+* ==================== Teacher Background ====================
 use "data/clean/teacher_background.dta", clear
 
 foreach v in id2 syear district campus exper fte totalpay first_cert_year sex degree {
@@ -35,7 +35,7 @@ replace certified = 0 if missing(certified) & !missing(syear)
 tempfile teacher_panel
 save "`teacher_panel'", replace
 
-* District-year treatment timing from yearly_tracker_merge.
+* ==================== Treatment Timing ====================
 use "data/clean/yearly_tracker_merge.dta", clear
 
 foreach v in district school_year firstyear ever4DSW post_adoption pct_four {
@@ -64,7 +64,7 @@ collapse (firstnm) firstyear ever4DSW post_adoption pct_four event_time hybrid_c
 tempfile calendar_panel
 save "`calendar_panel'", replace
 
-* Add rural indicator from district-level CCD file.
+* ==================== CCD Urbanicity ====================
 tempfile ccd_district_panel
 use "data/raw/ccd_district.dta", clear
 
@@ -86,7 +86,7 @@ drop District_Urbanicity year
 drop _merge
 save "`calendar_panel'", replace
 
-* Merge calendar/treatment into teacher-year panel.
+* ==================== Merge Teacher + Treatment ====================
 use "`teacher_panel'", clear
 merge m:1 district syear using "`calendar_panel'"
 quietly count if _merge == 1
@@ -97,6 +97,7 @@ if r(N) > 0 {
 drop if _merge == 2
 drop _merge
 
+* ==================== Classroom Characteristics ====================
 merge m:1 id2 syear using "replication/output/intermediate/classroom_controls_teacher_year.dta"
 drop if _merge == 2
 drop _merge
@@ -125,6 +126,8 @@ foreach v in id2 syear district campus firstyear ever4DSW post_adoption pct_four
 isid id2 syear
 sort id2 syear
 tsset id2 syear
+
+* ==================== Panel Construction ====================
 
 * Entrant outcomes from full-panel histories.
 gen is_entrant = (missing(L.syear) | district != L.district)
