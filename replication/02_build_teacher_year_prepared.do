@@ -38,7 +38,7 @@ save "`teacher_panel'", replace
 * ==================== Treatment Timing ====================
 use "data/clean/yearly_tracker_merge.dta", clear
 
-foreach v in district school_year firstyear ever4DSW post_adoption pct_four {
+foreach v in district school_year firstyear ever4DSW post_adoption pct_four Decision {
     capture confirm variable `v'
     if _rc {
         di as error "Missing required variable `v' in data/clean/yearly_tracker_merge.dta"
@@ -57,7 +57,16 @@ if _rc {
 
 gen syear = school_year
 gen event_time = syear - firstyear if !missing(firstyear)
-gen hybrid_calendar = (post_adoption == 1 & pct_four > 0 & pct_four < 1) if !missing(post_adoption) & !missing(pct_four)
+gen __decision = upper(trim(Decision))
+quietly count if !missing(__decision) & !inlist(__decision, "4DSW", "?", "HYBRID")
+if r(N) > 0 {
+    di as error "Decision contains unsupported values (expected 4DSW, ?, or Hybrid)"
+    exit 459
+}
+replace __decision = "4DSW" if __decision == "?"
+gen hybrid_calendar = (__decision == "HYBRID") if !missing(__decision)
+replace hybrid_calendar = 0 if __decision == "4DSW"
+drop __decision
 
 collapse (firstnm) firstyear ever4DSW post_adoption pct_four event_time hybrid_calendar, by(district syear)
 

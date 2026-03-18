@@ -7,7 +7,7 @@ adopt_year,firstyear,yearly_tracker_merge.dta,yes,First 4DSW adoption year
 treated,post_adoption,yearly_tracker_merge.dta,yes,1 if treated in current year
 ever_treated,ever4DSW,yearly_tracker_merge.dta,yes,1 if ever treated in panel
 event_time,event_time,derived in 02_build,yes,syear - firstyear
-hybrid_calendar,hybrid_calendar,derived in 02_build,no,Treated with 0<pct_four<1
+hybrid_calendar,hybrid_calendar,Decision in yearly_tracker_merge.dta,no,1 if Decision is Hybrid (? treated as 4DSW)
 rural,rural,raw ccd_district.dta (District_Urbanicity),no,Rural district indicator from district-year CCD merge
 fte,fte,teacher_background.dta,no,Used for duplicate resolution
 totalpay,totalpay,teacher_background.dta,no,Teacher total compensation

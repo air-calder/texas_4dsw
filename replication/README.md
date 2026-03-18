@@ -60,7 +60,7 @@ Or run modules manually in this order:
 | `district`, `campus`, `fte`, `totalpay`, `sex` | Available | `Code/teacher_background.do` employee records are carried through to final save | Present in the teacher file used by replication. |
 | `certified` | Derivable | `first_cert_year` from `Code/teacher_background.do:104` | Replication defines `certified = (syear >= first_cert_year)`. |
 | `data/clean/yearly_tracker_merge.dta` | Available | `Code/calendar_clean.do:190` | Core treatment timing file. |
-| `firstyear`, `ever4DSW`, `post_adoption`, `pct_four` | Available | `Code/calendar_clean.do:155`, `Code/calendar_clean.do:179`, `Code/calendar_clean.do:182` | Used for treatment, event timing, and hybrid flag construction. |
+| `firstyear`, `ever4DSW`, `post_adoption`, `pct_four`, `Decision` | Available | `Code/calendar_clean.do:155`, `Code/calendar_clean.do:179`, `Code/calendar_clean.do:182` | Used for treatment and event timing; `hybrid_calendar` is coded from `Decision` (`?` treated as `4DSW`). |
 | `data/raw/ccd_district.dta` | Available | `Code/calendar_clean.do:203`, `Code/calendar_clean.do:215` | Raw district CCD source used for urbanicity merge. |
 | `District_Urbanicity` / `rural` source | Available | `District_Urbanicity` kept from `data/raw/ccd_district.dta` | Replication sets `rural` from urbanicity categories after merge on `district` + `year`. |
 | `data/clean/vam_data_idsgroup1-4.dta` | Available | `Code/stu_tch_merge.do:183` | All four VAM slices are written in cleaning code. |
