@@ -1,6 +1,6 @@
 ## Teacher-Year Replication Pipeline (No PageRank)
 
-This folder contains a teacher-year replication pipeline for the two prior-literature papers. It builds the analysis panel directly from cleaned outputs produced by scripts in `Code/` and fails fast when required inputs are missing.
+This folder contains a teacher-year replication pipeline for the two prior-literature papers. It builds the analysis panel directly from cleaned outputs produced by scripts in `Code/`, adds Callaway-Sant'Anna (`csdid`) modules, and fails fast when required inputs are missing.
 
 Project-level contribution and environment rules are in `AGENTS.md`.
 
@@ -8,7 +8,7 @@ Project-level contribution and environment rules are in `AGENTS.md`.
 - Builds one `id2 x syear` panel from cleaned files in `data/clean/`.
 - Starts from cleaned outputs (no raw-data construction scripts).
 - Computes teacher `t+1` mobility/retention outcomes in-script because precomputed teacher versions are not created in `Code/`.
-- Includes main, event-study, heterogeneity, entrant, and robustness modules.
+- Includes main, event-study, heterogeneity, entrant, robustness, and `csdid` modules.
 - Excludes all PageRank-related outcomes by design.
 
 ### Expected Input (from `Code/` cleaning pipeline)
@@ -37,14 +37,16 @@ Or run modules manually in this order:
 9. `replication/07_teacher_entrant_sorting_main.do`
 10. `replication/08_teacher_entrant_eventstudy.do`
 11. `replication/09_teacher_robustness.do`
-12. `replication/10_tables_figures_teacher.do`
-13. `replication/11_unavailable_analyses_tally.do`
+12. `replication/12_teacher_csdid.do`
+13. `replication/13_prior_lit_descriptives_feasible.do`
+14. `replication/10_tables_figures_teacher.do`
+15. `replication/11_unavailable_analyses_tally.do`
 
 ### Outputs
 - `replication/output/intermediate/`: prepared teacher-year file
 - `replication/output/checks/`: integrity and pretrend diagnostics
 - `replication/output/descriptives/`: sample tables and trend files
-- `replication/output/tables/`: model result CSVs and combined workbook
+- `replication/output/tables/`: TWFE and C&S model result CSVs plus combined workbook
 - `replication/output/figures/`: trend and summary figures
 - `replication/output/logs/`: master run logs
 
@@ -53,6 +55,10 @@ Or run modules manually in this order:
 - Secondary retention checks include `stay_district_t1`, `switch_district_t1`, and `exit_tx_public_t1`.
 - Main FE structure is school FE + year FE (`areg` with absorbed school FE).
 - Default clustering is district-level; school and teacher-FE variants are included in robustness.
+- C&S modules require the Stata package `csdid` in the target environment (`ssc install csdid`).
+- Retention C&S outputs include both `anticipation(0)` and `anticipation(1)` estimates.
+- Cohort-specific ATT outputs are exported from `estat group` for retention and entrant outcomes.
+- Prior-literature descriptive tables are exported as feasible subsets with an explicit missing-components log.
 
 ### Best-Guess Availability from `Code/`
 | Input / Variable Group | Best Guess | Evidence in `Code/` | Notes |

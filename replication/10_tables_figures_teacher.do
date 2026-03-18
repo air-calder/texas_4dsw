@@ -29,6 +29,36 @@ export excel using "`workbook'", sheet("entrant_eventstudy") firstrow(variables)
 import delimited "replication/output/tables/teacher_robustness.csv", clear
 export excel using "`workbook'", sheet("robustness") firstrow(variables) sheetreplace
 
+import delimited "replication/output/tables/teacher_retention_csdid_main.csv", clear
+export excel using "`workbook'", sheet("csdid_ret_main") firstrow(variables) sheetreplace
+
+import delimited "replication/output/tables/teacher_retention_csdid_eventstudy.csv", clear
+export excel using "`workbook'", sheet("csdid_ret_event") firstrow(variables) sheetreplace
+
+import delimited "replication/output/tables/teacher_entrant_csdid_main.csv", clear
+export excel using "`workbook'", sheet("csdid_ent_main") firstrow(variables) sheetreplace
+
+import delimited "replication/output/tables/teacher_entrant_csdid_eventstudy.csv", clear
+export excel using "`workbook'", sheet("csdid_ent_event") firstrow(variables) sheetreplace
+
+import delimited "replication/output/tables/teacher_csdid_cohort_effects.csv", clear
+export excel using "`workbook'", sheet("csdid_cohorts") firstrow(variables) sheetreplace
+
+import delimited "replication/output/descriptives/lawson_table1_feasible.csv", clear
+export excel using "`workbook'", sheet("lawson_t1_feasible") firstrow(variables) sheetreplace
+
+import delimited "replication/output/descriptives/lawson_table2_feasible.csv", clear
+export excel using "`workbook'", sheet("lawson_t2_feasible") firstrow(variables) sheetreplace
+
+import delimited "replication/output/descriptives/khalid_table1_feasible.csv", clear
+export excel using "`workbook'", sheet("khalid_t1_feasible") firstrow(variables) sheetreplace
+
+import delimited "replication/output/descriptives/khalid_table2_feasible.csv", clear
+export excel using "`workbook'", sheet("khalid_t2_feasible") firstrow(variables) sheetreplace
+
+import delimited "replication/output/descriptives/prior_lit_descriptive_gaps.csv", clear
+export excel using "`workbook'", sheet("prior_lit_gaps") firstrow(variables) sheetreplace
+
 use "replication/output/descriptives/retention_trends_by_group.dta", clear
 foreach v in syear ever4DSW stay_school_t1 stay_district_t1 exit_tx_public_t1 {
     capture confirm variable `v'
