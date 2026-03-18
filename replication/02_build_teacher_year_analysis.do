@@ -86,21 +86,7 @@ gen incoming_from_tx = (is_entrant == 1 & !missing(L.syear) & district != L.dist
 gen incoming_first_time = (is_entrant == 1 & missing(L.syear))
 gen incoming_experience = exper if is_entrant == 1
 
-gen incoming_alt_path = .
-capture confirm variable cert_alt
-local has_cert_alt = (_rc == 0)
-capture confirm variable tier2
-local has_tier2 = (_rc == 0)
-if !`has_cert_alt' & !`has_tier2' {
-    di as error "Need cert_alt or tier2 in data/clean/teacher_background.dta"
-    exit 459
-}
-if `has_cert_alt' {
-    replace incoming_alt_path = cert_alt if is_entrant == 1
-}
-if `has_tier2' {
-    replace incoming_alt_path = tier2 if is_entrant == 1 & missing(incoming_alt_path)
-}
+gen incoming_alt_path = cert_alt if is_entrant == 1
 replace incoming_alt_path = 0 if is_entrant == 1 & missing(incoming_alt_path)
 
 gen incoming_adv_degree = .
@@ -290,92 +276,11 @@ tempfile class_controls
 forvalues i = 1/4 {
     use "data/clean/vam_data_idsgroup`i'.dta", clear
 
-    foreach v in teachid syear {
-        capture confirm variable `v'
-        if _rc {
-            di as error "Missing `v' in data/clean/vam_data_idsgroup`i'.dta"
-            exit 459
-        }
-    }
-
-    capture confirm variable section_id
-    if _rc {
-        capture confirm variable class_id
-        if _rc {
-            di as error "Need section_id or class_id in data/clean/vam_data_idsgroup`i'.dta"
-            exit 459
-        }
-        gen section_id = class_id
-    }
-
-    capture confirm variable class_frpl_share
-    if _rc {
-        capture confirm variable classx_frl
-        if _rc {
-            di as error "Need class_frpl_share or classx_frl in data/clean/vam_data_idsgroup`i'.dta"
-            exit 459
-        }
-        gen class_frpl_share = classx_frl
-    }
-
-    capture confirm variable class_nonwhite_share
-    if _rc {
-        capture confirm variable classx_white
-        if _rc == 0 {
-            gen class_nonwhite_share = 1 - classx_white
-        }
-        else {
-            foreach v in classx_black classx_hispanic classx_asian classx_other {
-                capture confirm variable `v'
-                if _rc {
-                    di as error "Need class_nonwhite_share or race-share variables in data/clean/vam_data_idsgroup`i'.dta"
-                    exit 459
-                }
-            }
-            gen class_nonwhite_share = classx_black + classx_hispanic + classx_asian + classx_other
-        }
-    }
-
-    capture confirm variable class_prior_ach
-    if _rc {
-        capture confirm variable classx_lag_r_ssc_std
-        local has_r = (_rc == 0)
-        capture confirm variable classx_lag_m_ssc_std
-        local has_m = (_rc == 0)
-
-        if !`has_r' & !`has_m' {
-            di as error "Need class_prior_ach or lag achievement variables in data/clean/vam_data_idsgroup`i'.dta"
-            exit 459
-        }
-
-        if `has_r' & `has_m' {
-            egen class_prior_ach = rowmean(classx_lag_r_ssc_std classx_lag_m_ssc_std)
-        }
-        else if `has_r' {
-            gen class_prior_ach = classx_lag_r_ssc_std
-        }
-        else {
-            gen class_prior_ach = classx_lag_m_ssc_std
-        }
-    }
-
-    capture confirm variable class_size
-    if _rc {
-        capture confirm variable num_students
-        if _rc == 0 {
-            gen class_size = num_students
-        }
-        else {
-            capture confirm variable id1
-            if _rc {
-                di as error "Need class_size, num_students, or id1 with section_id in data/clean/vam_data_idsgroup`i'.dta"
-                exit 459
-            }
-            by teachid syear section_id: gen __n_students = _N
-            gen class_size = __n_students
-            drop __n_students
-        }
-    }
+    gen class_frpl_share = classx_frl
+    gen class_nonwhite_share = 1 - classx_white
+    egen class_prior_ach = rowmean(classx_lag_r_ssc_std classx_lag_m_ssc_std)
+    sort teachid syear section_id
+    by teachid syear section_id: egen class_size = count(id1)
 
     keep teachid syear section_id class_size class_frpl_share class_nonwhite_share class_prior_ach
     drop if missing(teachid) | missing(syear)
