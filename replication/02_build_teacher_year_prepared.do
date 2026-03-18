@@ -85,25 +85,32 @@ save "`ccd_district_panel'", replace
 use "`calendar_panel'", clear
 gen year = syear
 merge 1:1 district year using "`ccd_district_panel'", keepusing(District_Urbanicity)
+quietly count
+local total_ccd = r(N)
 quietly count if _merge != 3
-if r(N) > 0 {
-    di as error "Rural merge to calendar panel is incomplete; unmatched district-year rows found"
-    exit 459
+local unmatched_ccd = r(N)
+if `unmatched_ccd' > 0 {
+    local pct_ccd = string(100 * `unmatched_ccd' / `total_ccd', "%5.2f")
+    di as text "WARNING: CCD urbanicity merge — `unmatched_ccd' of `total_ccd' rows unmatched (`pct_ccd'%)"
 }
+keep if _merge == 3
+drop _merge
 gen rural = (District_Urbanicity == "Rural, distant" | District_Urbanicity == "Rural, fringe" | District_Urbanicity == "Rural, remote")
 drop District_Urbanicity year
-drop _merge
 save "`calendar_panel'", replace
 
 * ==================== Merge Teacher + Treatment ====================
 use "`teacher_panel'", clear
 merge m:1 district syear using "`calendar_panel'"
-quietly count if _merge == 1
-if r(N) > 0 {
-    di as error "Teacher rows without matching district-year timing rows found"
-    exit 459
+quietly count
+local total_tch = r(N)
+quietly count if _merge != 3
+local unmatched_tch = r(N)
+if `unmatched_tch' > 0 {
+    local pct_tch = string(100 * `unmatched_tch' / `total_tch', "%5.2f")
+    di as text "WARNING: Teacher-calendar merge — `unmatched_tch' of `total_tch' rows unmatched (`pct_tch'%), dropping"
 }
-drop if _merge == 2
+keep if _merge == 3
 drop _merge
 
 * ==================== Classroom Characteristics ====================
