@@ -56,7 +56,7 @@ Or run modules manually in this order:
 | Input / Variable Group | Best Guess | Evidence in `Code/` | Notes |
 |---|---|---|---|
 | `data/clean/teacher_background.dta` | Available | `Code/teacher_background.do:135` | Explicitly saved by cleaning pipeline. |
-| `id2`, `syear`, `exper`, `first_cert_year`, `tier1`, `tier2`, `tier3`, `cert_alt` | Available | `Code/teacher_background.do:45`, `Code/teacher_background.do:86`, `Code/teacher_background.do:104`, `Code/teacher_background.do:121` | Explicitly generated/kept. |
+| `id2`, `syear`, `exper`, `first_cert_year`, `tier1`, `tier2`, `tier3`, `cert_alt`, `degree` | Available | `Code/teacher_background.do:45`, `Code/teacher_background.do:86`, `Code/teacher_background.do:104`, `Code/teacher_background.do:121` | Explicitly generated/kept or expected in teacher file used by replication. |
 | `district`, `campus`, `fte`, `totalpay`, `sex` | Likely available | `Code/teacher_background.do` employee records are carried through to final save | Not explicitly regenerated in script, but expected from source TEA employee files. |
 | `certified` | Derivable | `first_cert_year` from `Code/teacher_background.do:104` | Replication defines `certified = (syear >= first_cert_year)`. |
 | `data/clean/yearly_tracker_merge.dta` | Available | `Code/calendar_clean.do:190` | Core treatment timing file. |
@@ -66,7 +66,7 @@ Or run modules manually in this order:
 | `data/clean/vam_data_idsgroup1-4.dta` | Available | `Code/stu_tch_merge.do:183` | All four VAM slices are written in cleaning code. |
 | Classroom-control sources (`teachid`, `section_id`, `num_students`, `classx_frl`, `classx_white`, `classx_lag_*`) | Available | `Code/stu_tch_merge.do:53`, `Code/stu_tch_merge.do:124`, `Code/stu_tch_merge.do:175` | Used to build `class_size`, `class_frpl_share`, `class_nonwhite_share`, `class_prior_ach`. |
 | Entrant outcomes (`is_entrant`, `incoming_from_tx`, `incoming_first_time`, `incoming_experience`, `incoming_alt_path`) | Derived in replication | built in `replication/01_build_teacher_year_prepared.do` | Not explicitly produced as final vars in `Code/` outputs. |
-| Degree-based entrant outcomes (`incoming_adv_degree`, `incoming_no_degree`) | Available/derivable | `degree` is used in `replication/01_build_teacher_year_prepared.do` | Degree code mapping: 0 no degree, 1 bachelor's, 2 master's, 3 PhD. |
+| Degree-based entrant outcomes (`incoming_adv_degree`, `incoming_no_degree`) | Available (derived in replication) | `degree` is used in `replication/01_build_teacher_year_prepared.do` | Degree code mapping: 0 no degree, 1 bachelor's, 2 master's, 3 PhD; `incoming_adv_degree = inlist(degree,2,3)`, `incoming_no_degree = (degree==0)`. |
 | `adjacent_to_treated` | Missing | no adjacency construction in `Code/` | Requires an external district adjacency source. |
 
 This table is a code-based best guess from cleaning scripts and may differ from what is present in your local `.dta` files.

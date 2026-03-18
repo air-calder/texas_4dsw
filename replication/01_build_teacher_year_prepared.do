@@ -21,67 +21,13 @@ foreach v in id2 syear district campus exper fte totalpay first_cert_year sex de
     }
 }
 
-capture confirm numeric variable syear
-if _rc {
-    capture noisily destring syear, replace
-    if _rc {
-        di as error "Variable syear must be numeric or cleanly destringable in data/clean/teacher_background.dta"
-        exit 459
-    }
+quietly count if !missing(sex) & !inlist(upper(trim(sex)), "M", "F")
+if r(N) > 0 {
+    di as error "Variable sex contains values outside M/F"
+    exit 459
 }
 
-capture confirm numeric variable exper
-if _rc {
-    capture noisily destring exper, replace
-    if _rc {
-        di as error "Variable exper must be numeric or cleanly destringable in data/clean/teacher_background.dta"
-        exit 459
-    }
-}
-
-capture confirm numeric variable fte
-if _rc {
-    capture noisily destring fte, replace
-    if _rc {
-        di as error "Variable fte must be numeric or cleanly destringable in data/clean/teacher_background.dta"
-        exit 459
-    }
-}
-
-capture confirm numeric variable totalpay
-if _rc {
-    capture noisily destring totalpay, replace ignore(",$")
-    if _rc {
-        di as error "Variable totalpay must be numeric or cleanly destringable in data/clean/teacher_background.dta"
-        exit 459
-    }
-}
-
-capture confirm numeric variable degree
-if _rc {
-    capture noisily destring degree, replace
-    if _rc {
-        di as error "Variable degree must be numeric or cleanly destringable in data/clean/teacher_background.dta"
-        exit 459
-    }
-}
-
-capture confirm numeric variable first_cert_year
-if _rc {
-    capture noisily destring first_cert_year, replace
-    if _rc {
-        di as error "Variable first_cert_year must be numeric or cleanly destringable in data/clean/teacher_background.dta"
-        exit 459
-    }
-}
-
-capture confirm numeric variable sex
-if _rc == 0 {
-    gen female = (sex == 2) if !missing(sex)
-}
-else {
-    gen female = (upper(trim(sex)) == "F") if !missing(sex)
-}
+gen female = (upper(trim(sex)) == "F") if !missing(sex)
 
 gen certified = (syear >= first_cert_year) if !missing(syear) & !missing(first_cert_year)
 replace certified = 0 if missing(certified) & !missing(syear)
