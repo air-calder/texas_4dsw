@@ -5,7 +5,7 @@ This folder contains a teacher-year replication pipeline for the two prior-liter
 ### Scope
 - Builds one `id2 x syear` panel from cleaned files in `data/clean/`.
 - Starts from cleaned outputs (no raw-data construction scripts).
-- Computes `t+1` mobility/retention outcomes in-script even if precomputed versions exist.
+- Computes teacher `t+1` mobility/retention outcomes in-script because precomputed teacher versions are not created in `Code/`.
 - Includes main, event-study, heterogeneity, entrant, and robustness modules.
 - Excludes all PageRank-related outcomes by design.
 
