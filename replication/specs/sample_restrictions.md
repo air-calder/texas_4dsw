@@ -14,7 +14,7 @@ Suggested fields to fill:
 - Entrant sample definition (`is_entrant`)
 
 Current scaffold defaults:
-- Uses year window `2017-2024` in `replication/01_build_teacher_year_prepared.do`.
+- Uses year window `2017-2024` in `replication/02_build_teacher_year_prepared.do`.
 - Requires unique `id2 x syear` teacher-year rows (`isid`); duplicate rows fail the run.
 - Main retention models run on `is_incumbent == 1`.
 - Entrant/sorting models run on `is_entrant == 1`.

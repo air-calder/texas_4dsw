@@ -24,18 +24,19 @@ do replication/00_master.do
 ```
 
 Or run modules manually in this order:
-1. `replication/01_build_teacher_year_prepared.do`
-2. `replication/checks/01_data_integrity.do`
-3. `replication/checks/02_pretrend_checks.do`
-4. `replication/02_descriptives_teacher.do`
-5. `replication/03_teacher_retention_main.do`
-6. `replication/04_teacher_retention_eventstudy.do`
-7. `replication/05_teacher_retention_heterogeneity.do`
-8. `replication/06_teacher_entrant_sorting_main.do`
-9. `replication/07_teacher_entrant_eventstudy.do`
-10. `replication/08_teacher_robustness.do`
-11. `replication/09_tables_figures_teacher.do`
-12. `replication/10_unavailable_analyses_tally.do`
+1. `replication/01_build_classroom_controls_teacher_year.do`
+2. `replication/02_build_teacher_year_prepared.do`
+3. `replication/checks/01_data_integrity.do`
+4. `replication/checks/02_pretrend_checks.do`
+5. `replication/03_descriptives_teacher.do`
+6. `replication/04_teacher_retention_main.do`
+7. `replication/05_teacher_retention_eventstudy.do`
+8. `replication/06_teacher_retention_heterogeneity.do`
+9. `replication/07_teacher_entrant_sorting_main.do`
+10. `replication/08_teacher_entrant_eventstudy.do`
+11. `replication/09_teacher_robustness.do`
+12. `replication/10_tables_figures_teacher.do`
+13. `replication/11_unavailable_analyses_tally.do`
 
 ### Outputs
 - `replication/output/intermediate/`: prepared teacher-year file
@@ -64,8 +65,8 @@ Or run modules manually in this order:
 | `District_Urbanicity` / `rural` source | Available | `District_Urbanicity` kept from `data/raw/ccd_district.dta` | Replication sets `rural` from urbanicity categories after merge on `district` + `year`. |
 | `data/clean/vam_data_idsgroup1-4.dta` | Available | `Code/stu_tch_merge.do:183` | All four VAM slices are written in cleaning code. |
 | Classroom-control sources (`teachid`, `section_id`, `num_students`, `classx_frl`, `classx_white`, `classx_lag_*`) | Available | `Code/stu_tch_merge.do:53`, `Code/stu_tch_merge.do:124`, `Code/stu_tch_merge.do:175` | Used to build `class_size`, `class_frpl_share`, `class_nonwhite_share`, `class_prior_ach`. |
-| Entrant outcomes (`is_entrant`, `incoming_from_tx`, `incoming_first_time`, `incoming_experience`, `incoming_alt_path`) | Derived in replication | built in `replication/01_build_teacher_year_prepared.do` | Not explicitly produced as final vars in `Code/` outputs. |
-| Degree-based entrant outcomes (`incoming_adv_degree`, `incoming_no_degree`) | Available (derived in replication) | `degree` is used in `replication/01_build_teacher_year_prepared.do` | Degree code mapping: 0 no degree, 1 bachelor's, 2 master's, 3 PhD; `incoming_adv_degree = inlist(degree,2,3)`, `incoming_no_degree = (degree==0)`. |
+| Entrant outcomes (`is_entrant`, `incoming_from_tx`, `incoming_first_time`, `incoming_experience`, `incoming_alt_path`) | Derived in replication | built in `replication/02_build_teacher_year_prepared.do` | Not explicitly produced as final vars in `Code/` outputs. |
+| Degree-based entrant outcomes (`incoming_adv_degree`, `incoming_no_degree`) | Available (derived in replication) | `degree` is used in `replication/02_build_teacher_year_prepared.do` | Degree code mapping: 0 no degree, 1 bachelor's, 2 master's, 3 PhD; `incoming_adv_degree = inlist(degree,2,3)`, `incoming_no_degree = (degree==0)`. |
 | `adjacent_to_treated` | Missing | no adjacency construction in `Code/` | Requires an external district adjacency source. |
 
 This table is a code-based best guess from cleaning scripts and may differ from what is present in your local `.dta` files.

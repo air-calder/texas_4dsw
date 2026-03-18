@@ -32,37 +32,6 @@ gen female = (upper(trim(sex)) == "F") if !missing(sex)
 gen certified = (syear >= first_cert_year) if !missing(syear) & !missing(first_cert_year)
 replace certified = 0 if missing(certified) & !missing(syear)
 
-* Entrant outcomes from teacher histories.
-sort id2 syear
-tsset id2 syear
-
-gen is_entrant = (missing(L.syear) | district != L.district)
-gen incoming_from_tx = (is_entrant == 1 & !missing(L.syear) & district != L.district)
-gen incoming_first_time = (is_entrant == 1 & missing(L.syear))
-gen incoming_experience = exper if is_entrant == 1
-
-gen incoming_alt_path = cert_alt if is_entrant == 1
-replace incoming_alt_path = 0 if is_entrant == 1 & missing(incoming_alt_path)
-
-gen incoming_adv_degree = inlist(degree, 2, 3) if is_entrant == 1 & !missing(degree)
-gen incoming_no_degree = (degree == 0) if is_entrant == 1 & !missing(degree)
-
-quietly count if is_entrant == 1 & !missing(incoming_alt_path)
-if r(N) == 0 {
-    di as error "incoming_alt_path is missing for all entrant rows"
-    exit 459
-}
-quietly count if is_entrant == 1 & !missing(incoming_adv_degree)
-if r(N) == 0 {
-    di as error "incoming_adv_degree is missing for all entrant rows"
-    exit 459
-}
-quietly count if is_entrant == 1 & !missing(incoming_no_degree)
-if r(N) == 0 {
-    di as error "incoming_no_degree is missing for all entrant rows"
-    exit 459
-}
-
 tempfile teacher_panel
 save "`teacher_panel'", replace
 
@@ -99,24 +68,6 @@ save "`calendar_panel'", replace
 tempfile ccd_district_panel
 use "data/raw/ccd_district.dta", clear
 
-capture confirm variable StateAgencyID
-if _rc {
-    di as error "ccd_district must include StateAgencyID"
-    exit 459
-}
-
-capture confirm variable year
-if _rc {
-    di as error "ccd_district must include year"
-    exit 459
-}
-
-capture confirm variable District_Urbanicity
-if _rc {
-    di as error "ccd_district must include District_Urbanicity"
-    exit 459
-}
-
 gen district = substr(StateAgencyID, 4, .)
 keep district year District_Urbanicity
 collapse (firstnm) District_Urbanicity, by(district year)
@@ -146,46 +97,7 @@ if r(N) > 0 {
 drop if _merge == 2
 drop _merge
 
-tempfile panel_before_class
-save "`panel_before_class'", replace
-
-* Classroom controls from required VAM files.
-local first_vam = 1
-tempfile class_controls
-
-forvalues i = 1/4 {
-    use "data/clean/vam_data_idsgroup`i'.dta", clear
-
-    gen class_frpl_share = classx_frl
-    gen class_nonwhite_share = 1 - classx_white
-    egen class_prior_ach = rowmean(classx_lag_r_ssc_std classx_lag_m_ssc_std)
-    sort teachid syear section_id
-    by teachid syear section_id: egen class_size = count(id1)
-
-    keep teachid syear section_id class_size class_frpl_share class_nonwhite_share class_prior_ach
-    drop if missing(teachid) | missing(syear)
-    collapse (mean) class_size class_frpl_share class_nonwhite_share class_prior_ach, by(teachid syear)
-
-    gen id2 = teachid
-    drop teachid
-
-    if `first_vam' {
-        save "`class_controls'", replace
-        local first_vam = 0
-    }
-    else {
-        append using "`class_controls'"
-        save "`class_controls'", replace
-    }
-}
-
-use "`class_controls'", clear
-collapse (mean) class_size class_frpl_share class_nonwhite_share class_prior_ach, by(id2 syear)
-tempfile class_controls_final
-save "`class_controls_final'", replace
-
-use "`panel_before_class'", clear
-merge m:1 id2 syear using "`class_controls_final'"
+merge m:1 id2 syear using "replication/output/intermediate/classroom_controls_teacher_year.dta"
 drop if _merge == 2
 drop _merge
 
@@ -202,7 +114,7 @@ foreach v in class_size class_frpl_share class_nonwhite_share class_prior_ach {
     }
 }
 
-foreach v in id2 syear district campus firstyear ever4DSW post_adoption pct_four event_time hybrid_calendar rural female certified exper totalpay fte is_entrant incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+foreach v in id2 syear district campus firstyear ever4DSW post_adoption pct_four event_time hybrid_calendar rural female certified exper totalpay fte {
     capture confirm variable `v'
     if _rc {
         di as error "Missing final required variable `v'"
@@ -210,16 +122,37 @@ foreach v in id2 syear district campus firstyear ever4DSW post_adoption pct_four
     }
 }
 
-sort id2 syear
-save "replication/output/intermediate/teacher_year_analysis.dta", replace
-
-* Build t+1 outcomes and final prepared dataset.
-keep if inrange(syear, 2017, 2024)
-
 isid id2 syear
 sort id2 syear
 tsset id2 syear
 
+* Entrant outcomes from full-panel histories.
+gen is_entrant = (missing(L.syear) | district != L.district)
+gen incoming_from_tx = (is_entrant == 1 & !missing(L.syear) & district != L.district)
+gen incoming_first_time = (is_entrant == 1 & missing(L.syear))
+gen incoming_experience = exper if is_entrant == 1
+gen incoming_alt_path = cert_alt if is_entrant == 1
+replace incoming_alt_path = 0 if is_entrant == 1 & missing(incoming_alt_path)
+gen incoming_adv_degree = inlist(degree, 2, 3) if is_entrant == 1 & !missing(degree)
+gen incoming_no_degree = (degree == 0) if is_entrant == 1 & !missing(degree)
+
+quietly count if is_entrant == 1 & !missing(incoming_alt_path)
+if r(N) == 0 {
+    di as error "incoming_alt_path is missing for all entrant rows"
+    exit 459
+}
+quietly count if is_entrant == 1 & !missing(incoming_adv_degree)
+if r(N) == 0 {
+    di as error "incoming_adv_degree is missing for all entrant rows"
+    exit 459
+}
+quietly count if is_entrant == 1 & !missing(incoming_no_degree)
+if r(N) == 0 {
+    di as error "incoming_no_degree is missing for all entrant rows"
+    exit 459
+}
+
+* Build t+1 outcomes on full panel.
 quietly summarize syear, meanonly
 local max_year = r(max)
 
@@ -241,6 +174,20 @@ gen is_incumbent = !missing(stay_school_t1)
 gen exp_le5 = (exper <= 5) if !missing(exper)
 gen exp_gt5 = (exper > 5) if !missing(exper)
 gen exp_gt9 = (exper > 9) if !missing(exper)
+
+foreach v in is_entrant incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree observed_t1 stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 turnover_teacher_t1 is_incumbent exp_le5 exp_gt5 exp_gt9 {
+    capture confirm variable `v'
+    if _rc {
+        di as error "Missing generated variable `v'"
+        exit 459
+    }
+}
+
+sort id2 syear
+save "replication/output/intermediate/teacher_year_analysis.dta", replace
+
+* Final analysis window.
+keep if inrange(syear, 2017, 2024)
 
 sort id2 syear
 save "replication/output/intermediate/teacher_year_prepared.dta", replace

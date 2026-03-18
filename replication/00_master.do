@@ -18,7 +18,7 @@ capture mkdir "replication/output/logs"
 local run_stamp = subinstr("`c(current_date)'", " ", "", .)
 log using "replication/output/logs/master_`run_stamp'.log", text replace
 
-local script_list "replication/01_build_teacher_year_prepared.do replication/checks/01_data_integrity.do replication/checks/02_pretrend_checks.do replication/02_descriptives_teacher.do replication/03_teacher_retention_main.do replication/04_teacher_retention_eventstudy.do replication/05_teacher_retention_heterogeneity.do replication/06_teacher_entrant_sorting_main.do replication/07_teacher_entrant_eventstudy.do replication/08_teacher_robustness.do replication/09_tables_figures_teacher.do replication/10_unavailable_analyses_tally.do"
+local script_list "replication/01_build_classroom_controls_teacher_year.do replication/02_build_teacher_year_prepared.do replication/checks/01_data_integrity.do replication/checks/02_pretrend_checks.do replication/03_descriptives_teacher.do replication/04_teacher_retention_main.do replication/05_teacher_retention_eventstudy.do replication/06_teacher_retention_heterogeneity.do replication/07_teacher_entrant_sorting_main.do replication/08_teacher_entrant_eventstudy.do replication/09_teacher_robustness.do replication/10_tables_figures_teacher.do replication/11_unavailable_analyses_tally.do"
 
 foreach f of local script_list {
     di as text "Running `f' ..."
