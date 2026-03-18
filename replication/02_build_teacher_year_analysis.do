@@ -13,7 +13,7 @@ capture mkdir "replication/output/checks"
 * Teacher-year base from teacher_background.
 use "data/clean/teacher_background.dta", clear
 
-foreach v in id2 syear district campus exper fte salary first_cert_year {
+foreach v in id2 syear district campus exper fte salary first_cert_year sex {
     capture confirm variable `v'
     if _rc {
         di as error "Missing required variable `v' in data/clean/teacher_background.dta"
@@ -66,124 +66,104 @@ if _rc {
     }
 }
 
-capture confirm variable female
-if _rc {
-    capture confirm variable sex
-    if _rc {
-        di as error "Need female or sex in data/clean/teacher_background.dta"
-        exit 459
-    }
-
-    capture confirm numeric variable sex
-    if _rc == 0 {
-        gen female = (sex == 2) if !missing(sex)
-    }
-    else {
-        gen female = (upper(trim(sex)) == "F") if !missing(sex)
-    }
+capture confirm numeric variable sex
+if _rc == 0 {
+    gen female = (sex == 2) if !missing(sex)
+}
+else {
+    gen female = (upper(trim(sex)) == "F") if !missing(sex)
 }
 
-capture drop certified
 gen certified = (syear >= first_cert_year) if !missing(syear) & !missing(first_cert_year)
 replace certified = 0 if missing(certified) & !missing(syear)
 
-sort id2 syear
-drop if missing(id2) | missing(syear)
-gsort id2 syear -fte
-by id2 syear: keep if _n == 1
-
 * Entrant outcomes from teacher histories.
 sort id2 syear
-by id2: gen __prev_year = syear[_n-1]
-by id2: gen __prev_dist = district[_n-1]
+tsset id2 syear
 
-gen is_entrant = (missing(__prev_year) | syear > (__prev_year + 1) | district != __prev_dist)
-gen incoming_from_tx = (is_entrant == 1 & !missing(__prev_year) & district != __prev_dist)
-gen incoming_first_time = (is_entrant == 1 & missing(__prev_year))
+gen is_entrant = (missing(L.syear) | district != L.district)
+gen incoming_from_tx = (is_entrant == 1 & !missing(L.syear) & district != L.district)
+gen incoming_first_time = (is_entrant == 1 & missing(L.syear))
 gen incoming_experience = exper if is_entrant == 1
 
-capture confirm variable incoming_alt_path
-if _rc {
-    capture confirm variable cert_alt
-    if _rc == 0 {
-        gen incoming_alt_path = cert_alt if is_entrant == 1
-    }
-    else {
-        capture confirm variable tier2
-        if _rc == 0 {
-            gen incoming_alt_path = tier2 if is_entrant == 1
-        }
-        else {
-            di as error "Need incoming_alt_path, cert_alt, or tier2 in data/clean/teacher_background.dta"
-            exit 459
-        }
+gen incoming_alt_path = .
+capture confirm variable cert_alt
+local has_cert_alt = (_rc == 0)
+capture confirm variable tier2
+local has_tier2 = (_rc == 0)
+if !`has_cert_alt' & !`has_tier2' {
+    di as error "Need cert_alt or tier2 in data/clean/teacher_background.dta"
+    exit 459
+}
+if `has_cert_alt' {
+    replace incoming_alt_path = cert_alt if is_entrant == 1
+}
+if `has_tier2' {
+    replace incoming_alt_path = tier2 if is_entrant == 1 & missing(incoming_alt_path)
+}
+replace incoming_alt_path = 0 if is_entrant == 1 & missing(incoming_alt_path)
+
+gen incoming_adv_degree = .
+gen incoming_no_degree = .
+
+local adv_src ""
+foreach v in adv_degree has_adv_degree advanced_degree graduate_degree masters doctorate phd {
+    capture confirm variable `v'
+    if _rc == 0 & "`adv_src'" == "" {
+        local adv_src "`v'"
     }
 }
 
-capture confirm variable incoming_adv_degree
-local have_adv = (_rc == 0)
-capture confirm variable incoming_no_degree
-local have_nodeg = (_rc == 0)
+local nodeg_src ""
+foreach v in no_degree has_no_degree degree_none no_bachelor {
+    capture confirm variable `v'
+    if _rc == 0 & "`nodeg_src'" == "" {
+        local nodeg_src "`v'"
+    }
+}
 
-if !`have_adv' | !`have_nodeg' {
-    local adv_src ""
-    foreach v in adv_degree has_adv_degree advanced_degree graduate_degree masters doctorate phd {
+if "`adv_src'" != "" {
+    replace incoming_adv_degree = `adv_src' if is_entrant == 1
+}
+if "`nodeg_src'" != "" {
+    replace incoming_no_degree = `nodeg_src' if is_entrant == 1
+}
+
+quietly count if is_entrant == 1 & !missing(incoming_adv_degree)
+local has_adv = (r(N) > 0)
+quietly count if is_entrant == 1 & !missing(incoming_no_degree)
+local has_nodeg = (r(N) > 0)
+
+if !`has_adv' | !`has_nodeg' {
+    local degree_text ""
+    foreach v in degree highest_degree degree_level deg_level {
         capture confirm variable `v'
-        if _rc == 0 & "`adv_src'" == "" {
-            local adv_src "`v'"
+        if _rc == 0 & "`degree_text'" == "" {
+            local degree_text "`v'"
         }
     }
 
-    local nodeg_src ""
-    foreach v in no_degree has_no_degree degree_none no_bachelor {
-        capture confirm variable `v'
-        if _rc == 0 & "`nodeg_src'" == "" {
-            local nodeg_src "`v'"
-        }
+    if "`degree_text'" == "" {
+        di as error "Need degree information to build incoming_adv_degree and incoming_no_degree"
+        exit 459
     }
 
-    if !`have_adv' & "`adv_src'" != "" {
-        gen incoming_adv_degree = `adv_src' if is_entrant == 1
-        local have_adv = 1
-    }
-    if !`have_nodeg' & "`nodeg_src'" != "" {
-        gen incoming_no_degree = `nodeg_src' if is_entrant == 1
-        local have_nodeg = 1
+    capture confirm string variable `degree_text'
+    if _rc {
+        di as error "Degree source variable `degree_text' must be string to parse advanced/no degree"
+        exit 459
     }
 
-    if !`have_adv' | !`have_nodeg' {
-        local degree_text ""
-        foreach v in degree highest_degree degree_level deg_level {
-            capture confirm variable `v'
-            if _rc == 0 & "`degree_text'" == "" {
-                local degree_text "`v'"
-            }
-        }
-
-        if "`degree_text'" == "" {
-            di as error "Need degree information to build incoming_adv_degree and incoming_no_degree"
-            exit 459
-        }
-
-        capture confirm string variable `degree_text'
-        if _rc {
-            di as error "Degree source variable `degree_text' must be string to parse advanced/no degree"
-            exit 459
-        }
-
-        gen __deg_text = upper(trim(`degree_text'))
-        if !`have_adv' {
-            gen incoming_adv_degree = 1 if is_entrant == 1 & (strpos(__deg_text, "MASTER") > 0 | strpos(__deg_text, "DOCTOR") > 0 | strpos(__deg_text, "PHD") > 0 | strpos(__deg_text, "GRAD") > 0)
-            replace incoming_adv_degree = 0 if is_entrant == 1 & __deg_text != "" & missing(incoming_adv_degree)
-            local have_adv = 1
-        }
-        if !`have_nodeg' {
-            gen incoming_no_degree = 1 if is_entrant == 1 & (strpos(__deg_text, "NO DEG") > 0 | strpos(__deg_text, "NONE") > 0 | strpos(__deg_text, "LESS") > 0)
-            replace incoming_no_degree = 0 if is_entrant == 1 & __deg_text != "" & missing(incoming_no_degree)
-            local have_nodeg = 1
-        }
-        drop __deg_text
+    gen __deg_text = upper(trim(`degree_text'))
+    if !`has_adv' {
+        replace incoming_adv_degree = 1 if is_entrant == 1 & (strpos(__deg_text, "MASTER") > 0 | strpos(__deg_text, "DOCTOR") > 0 | strpos(__deg_text, "PHD") > 0 | strpos(__deg_text, "GRAD") > 0)
+        replace incoming_adv_degree = 0 if is_entrant == 1 & __deg_text != "" & missing(incoming_adv_degree)
     }
+    if !`has_nodeg' {
+        replace incoming_no_degree = 1 if is_entrant == 1 & (strpos(__deg_text, "NO DEG") > 0 | strpos(__deg_text, "NONE") > 0 | strpos(__deg_text, "LESS") > 0)
+        replace incoming_no_degree = 0 if is_entrant == 1 & __deg_text != "" & missing(incoming_no_degree)
+    }
+    drop __deg_text
 }
 
 quietly count if is_entrant == 1 & !missing(incoming_alt_path)
@@ -201,8 +181,6 @@ if r(N) == 0 {
     di as error "incoming_no_degree is missing for all entrant rows"
     exit 459
 }
-
-drop __prev_year __prev_dist
 
 tempfile teacher_panel
 save "`teacher_panel'", replace

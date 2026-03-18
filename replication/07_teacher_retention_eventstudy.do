@@ -31,7 +31,6 @@ forvalues k = `event_min'/`event_max' {
         else {
             local vn = "et_p`k'"
         }
-        capture drop `vn'
         gen `vn' = (event_time == `k')
         local event_vars "`event_vars' `vn'"
     }
