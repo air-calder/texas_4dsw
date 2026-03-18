@@ -2,6 +2,8 @@
 
 This folder contains a teacher-year replication pipeline for the two prior-literature papers. It builds the analysis panel directly from cleaned outputs produced by scripts in `Code/` and fails fast when required inputs are missing.
 
+Project-level contribution and environment rules are in `AGENTS.md`.
+
 ### Scope
 - Builds one `id2 x syear` panel from cleaned files in `data/clean/`.
 - Starts from cleaned outputs (no raw-data construction scripts).
