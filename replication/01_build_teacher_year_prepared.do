@@ -96,57 +96,42 @@ tempfile calendar_panel
 save "`calendar_panel'", replace
 
 * Add rural indicator from district-level CCD file.
-use "data/clean/ccd_district_weighted.dta", clear
+tempfile ccd_district_panel
+use "data/raw/ccd_district.dta", clear
 
-capture confirm variable district
+capture confirm variable StateAgencyID
 if _rc {
-    di as error "rural source must include district"
+    di as error "ccd_district must include StateAgencyID"
     exit 459
 }
 
-capture confirm variable school_year
+capture confirm variable year
 if _rc {
-    capture confirm variable year
-    if _rc {
-        di as error "rural source must include school_year or year"
-        exit 459
-    }
-    gen school_year = year
+    di as error "ccd_district must include year"
+    exit 459
 }
 
-capture confirm numeric variable school_year
+capture confirm variable District_Urbanicity
 if _rc {
-    capture noisily destring school_year, replace
-    if _rc {
-        di as error "school_year in rural source must be numeric or cleanly destringable"
-        exit 459
-    }
+    di as error "ccd_district must include District_Urbanicity"
+    exit 459
 }
 
-capture confirm variable rural
-if _rc {
-    capture confirm variable District_Urbanicity
-    if _rc {
-        di as error "Need rural or District_Urbanicity in data/clean/ccd_district_weighted.dta"
-        exit 459
-    }
-    gen rural = (District_Urbanicity == "Rural, distant" | District_Urbanicity == "Rural, fringe" | District_Urbanicity == "Rural, remote")
-}
-
-gen syear = school_year
-keep district syear rural
-collapse (firstnm) rural, by(district syear)
-
-tempfile rural_panel
-save "`rural_panel'", replace
+gen district = substr(StateAgencyID, 4, .)
+keep district year District_Urbanicity
+collapse (firstnm) District_Urbanicity, by(district year)
+save "`ccd_district_panel'", replace
 
 use "`calendar_panel'", clear
-merge 1:1 district syear using "`rural_panel'"
+gen year = syear
+merge 1:1 district year using "`ccd_district_panel'", keepusing(District_Urbanicity)
 quietly count if _merge != 3
 if r(N) > 0 {
     di as error "Rural merge to calendar panel is incomplete; unmatched district-year rows found"
     exit 459
 }
+gen rural = (District_Urbanicity == "Rural, distant" | District_Urbanicity == "Rural, fringe" | District_Urbanicity == "Rural, remote")
+drop District_Urbanicity year
 drop _merge
 save "`calendar_panel'", replace
 

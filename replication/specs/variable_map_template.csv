@@ -8,7 +8,7 @@ treated,post_adoption,yearly_tracker_merge.dta,yes,1 if treated in current year
 ever_treated,ever4DSW,yearly_tracker_merge.dta,yes,1 if ever treated in panel
 event_time,event_time,derived in 01_build,yes,syear - firstyear
 hybrid_calendar,hybrid_calendar,derived in 01_build,no,Treated with 0<pct_four<1
-rural,rural,ccd_district_weighted.dta or derived,no,Rural district indicator
+rural,rural,raw ccd_district.dta (District_Urbanicity),no,Rural district indicator from district-year CCD merge
 fte,fte,teacher_background.dta,no,Used for duplicate resolution
 totalpay,totalpay,teacher_background.dta,no,Teacher total compensation
 experience,exper,teacher_background.dta,no,Years of experience

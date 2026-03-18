@@ -12,9 +12,8 @@ This folder contains a teacher-year replication pipeline for the two prior-liter
 ### Expected Input (from `Code/` cleaning pipeline)
 - `data/clean/teacher_background.dta`
 - `data/clean/yearly_tracker_merge.dta`
-- Optional for additional controls/flags:
-  - `data/clean/vam_data_idsgroup1.dta` through `data/clean/vam_data_idsgroup4.dta`
-  - `data/clean/ccd_district_weighted.dta`
+- `data/clean/vam_data_idsgroup1.dta` through `data/clean/vam_data_idsgroup4.dta`
+- `data/raw/ccd_district.dta` (uses `year`, `StateAgencyID`, and `District_Urbanicity`)
 - Scripts use `Code/` variable names directly (no replication config file).
 
 ### Run Order
@@ -61,8 +60,8 @@ Or run modules manually in this order:
 | `certified` | Derivable | `first_cert_year` from `Code/teacher_background.do:104` | Replication defines `certified = (syear >= first_cert_year)`. |
 | `data/clean/yearly_tracker_merge.dta` | Available | `Code/calendar_clean.do:190` | Core treatment timing file. |
 | `firstyear`, `ever4DSW`, `post_adoption`, `pct_four` | Available | `Code/calendar_clean.do:155`, `Code/calendar_clean.do:179`, `Code/calendar_clean.do:182` | Used for treatment, event timing, and hybrid flag construction. |
-| `data/clean/ccd_district_weighted.dta` | Available | `Code/calendar_clean.do:217` | District-level CCD merge output. |
-| `District_Urbanicity` / `rural` source | Likely available | `Code/calendar_output.do:164` and `Code/calendar_clean.do:215` | `rural` can be derived from district urbanicity categories. |
+| `data/raw/ccd_district.dta` | Available | `Code/calendar_clean.do:203`, `Code/calendar_clean.do:215` | Raw district CCD source used for urbanicity merge. |
+| `District_Urbanicity` / `rural` source | Available | `District_Urbanicity` kept from `data/raw/ccd_district.dta` | Replication sets `rural` from urbanicity categories after merge on `district` + `year`. |
 | `data/clean/vam_data_idsgroup1-4.dta` | Available | `Code/stu_tch_merge.do:183` | All four VAM slices are written in cleaning code. |
 | Classroom-control sources (`teachid`, `section_id`, `num_students`, `classx_frl`, `classx_white`, `classx_lag_*`) | Available | `Code/stu_tch_merge.do:53`, `Code/stu_tch_merge.do:124`, `Code/stu_tch_merge.do:175` | Used to build `class_size`, `class_frpl_share`, `class_nonwhite_share`, `class_prior_ach`. |
 | Entrant outcomes (`is_entrant`, `incoming_from_tx`, `incoming_first_time`, `incoming_experience`, `incoming_alt_path`) | Derived in replication | built in `replication/01_build_teacher_year_prepared.do` | Not explicitly produced as final vars in `Code/` outputs. |
