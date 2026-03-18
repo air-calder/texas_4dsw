@@ -8,12 +8,6 @@ version 17
 
 local prepared_data "replication/output/intermediate/teacher_year_prepared.dta"
 
-capture confirm file "`prepared_data'"
-if _rc {
-    di as error "Missing prepared data file: `prepared_data'"
-    exit 601
-}
-
 use "`prepared_data'", clear
 
 foreach v in post_adoption campus event_time is_incumbent is_entrant stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {

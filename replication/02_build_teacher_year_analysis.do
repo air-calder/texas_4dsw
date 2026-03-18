@@ -10,32 +10,6 @@ capture mkdir "replication/output"
 capture mkdir "replication/output/intermediate"
 capture mkdir "replication/output/checks"
 
-capture confirm file "data/clean/teacher_background.dta"
-if _rc {
-    di as error "Missing cleaned teacher file: data/clean/teacher_background.dta"
-    exit 601
-}
-
-capture confirm file "data/clean/yearly_tracker_merge.dta"
-if _rc {
-    di as error "Missing cleaned calendar file: data/clean/yearly_tracker_merge.dta"
-    exit 601
-}
-
-capture confirm file "data/clean/ccd_district_weighted.dta"
-if _rc {
-    di as error "Missing rural source file: data/clean/ccd_district_weighted.dta"
-    exit 601
-}
-
-forvalues i = 1/4 {
-    capture confirm file "data/clean/vam_data_idsgroup`i'.dta"
-    if _rc {
-        di as error "Missing VAM input file: data/clean/vam_data_idsgroup`i'.dta"
-        exit 601
-    }
-}
-
 * Teacher-year base from teacher_background.
 use "data/clean/teacher_background.dta", clear
 

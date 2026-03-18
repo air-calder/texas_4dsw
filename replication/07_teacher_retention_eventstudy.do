@@ -10,11 +10,6 @@ local prepared_data "replication/output/intermediate/teacher_year_prepared.dta"
 local event_min = -3
 local event_max = 4
 
-capture confirm file "`prepared_data'"
-if _rc {
-    do "replication/04_prepare_teacher_outcomes.do"
-}
-
 use "`prepared_data'", clear
 capture mkdir "replication/output/tables"
 

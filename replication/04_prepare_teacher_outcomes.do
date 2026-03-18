@@ -9,17 +9,6 @@ version 17
 local analysis_data "replication/output/intermediate/teacher_year_analysis.dta"
 local prepared_data "replication/output/intermediate/teacher_year_prepared.dta"
 
-capture confirm file "`analysis_data'"
-if _rc {
-    do "replication/02_build_teacher_year_analysis.do"
-}
-
-capture confirm file "`analysis_data'"
-if _rc {
-    di as error "Missing analysis dataset: `analysis_data'"
-    exit 601
-}
-
 use "`analysis_data'", clear
 
 capture mkdir "replication/output/intermediate"

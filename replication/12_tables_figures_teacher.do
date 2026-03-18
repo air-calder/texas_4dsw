@@ -9,14 +9,6 @@ version 17
 capture mkdir "replication/output/tables"
 capture mkdir "replication/output/figures"
 
-foreach f in replication/output/tables/teacher_retention_main.csv replication/output/tables/teacher_retention_eventstudy.csv replication/output/tables/teacher_retention_heterogeneity.csv replication/output/tables/teacher_entrant_main.csv replication/output/tables/teacher_entrant_eventstudy.csv replication/output/tables/teacher_robustness.csv replication/output/descriptives/retention_trends_by_group.dta {
-    capture confirm file "`f'"
-    if _rc {
-        di as error "Missing required file: `f'"
-        exit 601
-    }
-}
-
 local workbook "replication/output/tables/teacher_replication_results.xlsx"
 
 import delimited "replication/output/tables/teacher_retention_main.csv", clear
