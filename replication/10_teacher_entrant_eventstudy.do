@@ -1,6 +1,7 @@
 /*
 Description: Event-study estimates for entrant/sorting outcomes.
 Run from project root.
+Fail fast on missing required variables.
 */
 
 version 17
@@ -17,22 +18,29 @@ if _rc {
 use "`prepared_data'", clear
 capture mkdir "replication/output/tables"
 
-capture confirm variable is_entrant
-if _rc {
-    do "replication/utils/record_unavailable_analysis.do" "10_entrant_eventstudy" "entrant_eventstudy_models" "is_entrant" "entrant_flag_missing"
-    file open fh using "replication/output/tables/teacher_entrant_eventstudy_note.txt", write replace
-    file write fh "Entrant sample variable is_entrant is missing; entrant event studies skipped." _n
-    file close fh
-    exit
+foreach v in id2 syear district campus is_entrant event_time incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+    capture confirm variable `v'
+    if _rc {
+        do "replication/utils/record_unavailable_analysis.do" "10_entrant_eventstudy" "entrant_eventstudy_models" "`v'" "missing_required_variable"
+        di as error "Missing required variable `v' in `prepared_data'"
+        exit 459
+    }
 }
 
 quietly count if is_entrant == 1
 if r(N) == 0 {
     do "replication/utils/record_unavailable_analysis.do" "10_entrant_eventstudy" "entrant_eventstudy_models" "is_entrant" "entrant_sample_has_zero_rows"
-    file open fh using "replication/output/tables/teacher_entrant_eventstudy_note.txt", write replace
-    file write fh "Entrant sample variable is_entrant has zero entrant observations; entrant event studies skipped." _n
-    file close fh
-    exit
+    di as error "Entrant sample has zero rows"
+    exit 459
+}
+
+foreach y in incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+    quietly count if is_entrant == 1 & !missing(`y')
+    if r(N) == 0 {
+        do "replication/utils/record_unavailable_analysis.do" "10_entrant_eventstudy" "entrant_eventstudy_models" "`y'" "entrant_outcome_all_missing_in_sample"
+        di as error "Entrant outcome `y' is all missing in entrant sample"
+        exit 459
+    }
 }
 
 local event_vars ""
@@ -56,33 +64,19 @@ tempname posth
 postfile `posth' str40 outcome int event_time double coef se pvalue using "`es'", replace
 
 foreach y in incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
-    capture confirm variable `y'
-    if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "10_entrant_eventstudy" "entrant_eventstudy_models" "`y'" "entrant_outcome_missing"
-    }
-    else {
-        quietly count if is_entrant == 1 & !missing(`y')
-        if r(N) == 0 {
-            do "replication/utils/record_unavailable_analysis.do" "10_entrant_eventstudy" "entrant_eventstudy_models" "`y'" "entrant_outcome_all_missing_in_sample"
-            continue
+    noisily areg `y' `event_vars' i.syear if is_entrant == 1 & !missing(`y'), absorb(campus) vce(cluster district)
+    foreach ev of local event_vars {
+        if strpos("`ev'", "et_m") == 1 {
+            local et = -real(substr("`ev'", 5, .))
         }
-
-        capture noisily areg `y' `event_vars' i.syear if is_entrant == 1 & !missing(`y'), absorb(campus) vce(cluster district)
-        if _rc == 0 {
-            foreach ev of local event_vars {
-                if strpos("`ev'", "et_m") == 1 {
-                    local et = -real(substr("`ev'", 5, .))
-                }
-                else {
-                    local et = real(substr("`ev'", 5, .))
-                }
-                local b = _b[`ev']
-                local s = _se[`ev']
-                local z = `b' / `s'
-                local p = 2 * normal(-abs(`z'))
-                post `posth' ("`y'") (`et') (`b') (`s') (`p')
-            }
+        else {
+            local et = real(substr("`ev'", 5, .))
         }
+        local b = _b[`ev']
+        local s = _se[`ev']
+        local z = `b' / `s'
+        local p = 2 * normal(-abs(`z'))
+        post `posth' ("`y'") (`et') (`b') (`s') (`p')
     }
 }
 postclose `posth'

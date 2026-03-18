@@ -1,6 +1,7 @@
 /*
 Description: Robustness checks for teacher-level retention outcomes.
 Run from project root.
+Fail fast on missing required variables.
 */
 
 version 17
@@ -15,17 +16,25 @@ if _rc {
 use "`prepared_data'", clear
 capture mkdir "replication/output/tables"
 
-local specs "baseline cluster_school teacher_fe"
-
-capture confirm variable rural
-if _rc == 0 {
-    local specs "`specs' rural_only"
+foreach v in id2 syear district campus is_incumbent post_adoption rural hybrid_calendar stay_school_t1 stay_district_t1 {
+    capture confirm variable `v'
+    if _rc {
+        do "replication/utils/record_unavailable_analysis.do" "11_robustness" "robustness_models" "`v'" "missing_required_variable"
+        di as error "Missing required variable `v' in `prepared_data'"
+        exit 459
+    }
 }
 
-capture confirm variable hybrid_calendar
-if _rc == 0 {
-    local specs "`specs' no_hybrid"
+foreach y in stay_school_t1 stay_district_t1 {
+    quietly count if is_incumbent == 1 & !missing(`y')
+    if r(N) == 0 {
+        do "replication/utils/record_unavailable_analysis.do" "11_robustness" "robustness_models" "`y'" "no_nonmissing_outcome_in_incumbent_sample"
+        di as error "Outcome `y' has no nonmissing values in incumbent sample"
+        exit 459
+    }
 }
+
+local specs "baseline cluster_school teacher_fe rural_only no_hybrid"
 
 tempfile rb
 tempname posth
@@ -46,25 +55,20 @@ foreach sp of local specs {
     }
 
     foreach y in stay_school_t1 stay_district_t1 {
-        capture confirm variable `y'
-        if _rc == 0 {
-            if "`sp'" == "teacher_fe" {
-                capture noisily xtset id2 syear
-                capture noisily xtreg `y' post_adoption i.syear if `if_cond' & !missing(`y'), fe vce(cluster district)
-            }
-            else {
-                capture noisily areg `y' post_adoption i.syear if `if_cond' & !missing(`y'), absorb(campus) vce(cluster `cluster_var')
-            }
-
-            if _rc == 0 {
-                local b = _b[post_adoption]
-                local s = _se[post_adoption]
-                local z = `b' / `s'
-                local p = 2 * normal(-abs(`z'))
-                local n = e(N)
-                post `posth' ("`sp'") ("`y'") (`b') (`s') (`p') (`n')
-            }
+        if "`sp'" == "teacher_fe" {
+            noisily xtset id2 syear
+            noisily xtreg `y' post_adoption i.syear if `if_cond' & !missing(`y'), fe vce(cluster district)
         }
+        else {
+            noisily areg `y' post_adoption i.syear if `if_cond' & !missing(`y'), absorb(campus) vce(cluster `cluster_var')
+        }
+
+        local b = _b[post_adoption]
+        local s = _se[post_adoption]
+        local z = `b' / `s'
+        local p = 2 * normal(-abs(`z'))
+        local n = e(N)
+        post `posth' ("`sp'") ("`y'") (`b') (`s') (`p') (`n')
     }
 }
 postclose `posth'

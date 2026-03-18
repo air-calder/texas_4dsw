@@ -1,6 +1,7 @@
 /*
 Description: Event-study estimates for teacher-level retention outcomes.
 Run from project root.
+Fail fast on missing required variables.
 */
 
 version 17
@@ -16,6 +17,15 @@ if _rc {
 
 use "`prepared_data'", clear
 capture mkdir "replication/output/tables"
+
+foreach v in id2 syear district campus is_incumbent event_time stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 {
+    capture confirm variable `v'
+    if _rc {
+        do "replication/utils/record_unavailable_analysis.do" "07_retention_eventstudy" "eventstudy_models" "`v'" "missing_required_variable"
+        di as error "Missing required variable `v' in `prepared_data'"
+        exit 459
+    }
+}
 
 local event_vars ""
 forvalues k = `event_min'/`event_max' {
@@ -38,24 +48,26 @@ tempname posth
 postfile `posth' str40 outcome int event_time double coef se pvalue using "`es'", replace
 
 foreach y in stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 {
-    capture confirm variable `y'
-    if _rc == 0 {
-        capture noisily areg `y' `event_vars' i.syear if is_incumbent == 1 & !missing(`y'), absorb(campus) vce(cluster district)
-        if _rc == 0 {
-            foreach ev of local event_vars {
-                if strpos("`ev'", "et_m") == 1 {
-                    local et = -real(substr("`ev'", 5, .))
-                }
-                else {
-                    local et = real(substr("`ev'", 5, .))
-                }
-                local b = _b[`ev']
-                local s = _se[`ev']
-                local z = `b' / `s'
-                local p = 2 * normal(-abs(`z'))
-                post `posth' ("`y'") (`et') (`b') (`s') (`p')
-            }
+    quietly count if is_incumbent == 1 & !missing(`y')
+    if r(N) == 0 {
+        do "replication/utils/record_unavailable_analysis.do" "07_retention_eventstudy" "eventstudy_models" "`y'" "no_nonmissing_outcome_in_incumbent_sample"
+        di as error "Outcome `y' has no nonmissing values in incumbent sample"
+        exit 459
+    }
+
+    noisily areg `y' `event_vars' i.syear if is_incumbent == 1 & !missing(`y'), absorb(campus) vce(cluster district)
+    foreach ev of local event_vars {
+        if strpos("`ev'", "et_m") == 1 {
+            local et = -real(substr("`ev'", 5, .))
         }
+        else {
+            local et = real(substr("`ev'", 5, .))
+        }
+        local b = _b[`ev']
+        local s = _se[`ev']
+        local z = `b' / `s'
+        local p = 2 * normal(-abs(`z'))
+        post `posth' ("`y'") (`et') (`b') (`s') (`p')
     }
 }
 postclose `posth'

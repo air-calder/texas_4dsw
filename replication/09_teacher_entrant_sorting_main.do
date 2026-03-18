@@ -1,6 +1,7 @@
 /*
 Description: Main entrant/sorting models at teacher-year level.
 Run from project root.
+Fail fast on missing required variables.
 */
 
 version 17
@@ -15,70 +16,53 @@ if _rc {
 use "`prepared_data'", clear
 capture mkdir "replication/output/tables"
 
-capture confirm variable is_entrant
-if _rc {
-    do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "is_entrant" "entrant_flag_missing"
-    file open fh using "replication/output/tables/teacher_entrant_note.txt", write replace
-    file write fh "Entrant sample variable is_entrant is missing; entrant models skipped." _n
-    file close fh
-    exit
+foreach v in id2 syear district campus is_entrant post_adoption female certified exper salary fte incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+    capture confirm variable `v'
+    if _rc {
+        do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "`v'" "missing_required_variable"
+        di as error "Missing required variable `v' in `prepared_data'"
+        exit 459
+    }
 }
 
 quietly count if is_entrant == 1
 if r(N) == 0 {
     do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "is_entrant" "entrant_sample_has_zero_rows"
-    file open fh using "replication/output/tables/teacher_entrant_note.txt", write replace
-    file write fh "Entrant sample variable is_entrant has zero entrant observations; entrant models skipped." _n
-    file close fh
-    exit
+    di as error "Entrant sample has zero rows"
+    exit 459
 }
 
-local tcontrols ""
-foreach x in female certified exper salary fte {
-    capture confirm variable `x'
-    if _rc == 0 {
-        local tcontrols "`tcontrols' `x'"
+foreach y in incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+    quietly count if is_entrant == 1 & !missing(`y')
+    if r(N) == 0 {
+        do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "`y'" "entrant_outcome_all_missing_in_sample"
+        di as error "Entrant outcome `y' is all missing in entrant sample"
+        exit 459
     }
 }
+
+local tcontrols "female certified exper salary fte"
 
 tempfile results
 tempname posth
 postfile `posth' str30 spec str40 outcome double coef se pvalue long N using "`results'", replace
 
 foreach y in incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
-    capture confirm variable `y'
-    if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "`y'" "entrant_outcome_missing"
-    }
-    else {
-        quietly count if is_entrant == 1 & !missing(`y')
-        if r(N) == 0 {
-            do "replication/utils/record_unavailable_analysis.do" "09_entrant_main" "entrant_main_models" "`y'" "entrant_outcome_all_missing_in_sample"
-            continue
-        }
+    noisily areg `y' post_adoption i.syear if is_entrant == 1 & !missing(`y'), absorb(campus) vce(cluster district)
+    local b = _b[post_adoption]
+    local s = _se[post_adoption]
+    local z = `b' / `s'
+    local p = 2 * normal(-abs(`z'))
+    local n = e(N)
+    post `posth' ("baseline") ("`y'") (`b') (`s') (`p') (`n')
 
-        capture noisily areg `y' post_adoption i.syear if is_entrant == 1 & !missing(`y'), absorb(campus) vce(cluster district)
-        if _rc == 0 {
-            local b = _b[post_adoption]
-            local s = _se[post_adoption]
-            local z = `b' / `s'
-            local p = 2 * normal(-abs(`z'))
-            local n = e(N)
-            post `posth' ("baseline") ("`y'") (`b') (`s') (`p') (`n')
-        }
-
-        if "`tcontrols'" != "" {
-            capture noisily areg `y' post_adoption `tcontrols' i.syear if is_entrant == 1 & !missing(`y'), absorb(campus) vce(cluster district)
-            if _rc == 0 {
-                local b = _b[post_adoption]
-                local s = _se[post_adoption]
-                local z = `b' / `s'
-                local p = 2 * normal(-abs(`z'))
-                local n = e(N)
-                post `posth' ("plus_teacher_ctrl") ("`y'") (`b') (`s') (`p') (`n')
-            }
-        }
-    }
+    noisily areg `y' post_adoption `tcontrols' i.syear if is_entrant == 1 & !missing(`y'), absorb(campus) vce(cluster district)
+    local b = _b[post_adoption]
+    local s = _se[post_adoption]
+    local z = `b' / `s'
+    local p = 2 * normal(-abs(`z'))
+    local n = e(N)
+    post `posth' ("plus_teacher_ctrl") ("`y'") (`b') (`s') (`p') (`n')
 }
 postclose `posth'
 

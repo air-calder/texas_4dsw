@@ -1,6 +1,7 @@
 /*
 Description: Descriptive tables and trend files for teacher-year panel.
 Run from project root.
+Fail fast on missing required variables.
 */
 
 version 17
@@ -15,6 +16,15 @@ if _rc {
 use "`prepared_data'", clear
 capture mkdir "replication/output/descriptives"
 capture mkdir "replication/output/figures"
+
+foreach v in id2 syear district campus post_adoption ever4DSW is_incumbent is_entrant female certified exper salary fte class_size class_frpl_share class_nonwhite_share class_prior_ach stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+    capture confirm variable `v'
+    if _rc {
+        do "replication/utils/record_unavailable_analysis.do" "05_descriptives" "descriptive_outputs" "`v'" "missing_required_variable"
+        di as error "Missing required variable `v' in `prepared_data'"
+        exit 459
+    }
+}
 
 * 1) Sample counts by year.
 preserve
@@ -50,19 +60,8 @@ restore
 * 3) Pre-period balance means by ever-treated status.
 preserve
 keep if syear <= 2019
-
-local balance_vars ""
-foreach v in female certified exper salary fte class_size class_frpl_share class_nonwhite_share class_prior_ach stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 {
-    capture confirm variable `v'
-    if _rc == 0 {
-        local balance_vars "`balance_vars' `v'"
-    }
-}
-
-if "`balance_vars'" != "" {
-    collapse (mean) `balance_vars', by(ever4DSW)
-    export delimited using "replication/output/descriptives/preperiod_balance_means.csv", replace
-}
+collapse (mean) female certified exper salary fte class_size class_frpl_share class_nonwhite_share class_prior_ach stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1, by(ever4DSW)
+export delimited using "replication/output/descriptives/preperiod_balance_means.csv", replace
 restore
 
 * 4) Retention trends among incumbents by ever-treated status.
@@ -74,40 +73,20 @@ export delimited using "replication/output/descriptives/retention_trends_by_grou
 restore
 
 * 5) Entrant outcome trends by ever-treated status.
-capture confirm variable is_entrant
-if _rc == 0 {
-    preserve
-    keep if is_entrant == 1
-
-    local entrant_outcomes ""
-    foreach y in incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
-        capture confirm variable `y'
-        if _rc == 0 {
-            local entrant_outcomes "`entrant_outcomes' `y'"
-        }
-    }
-
-    if "`entrant_outcomes'" != "" {
-        collapse (mean) `entrant_outcomes', by(syear ever4DSW)
-        save "replication/output/descriptives/entrant_trends_by_group.dta", replace
-        export delimited using "replication/output/descriptives/entrant_trends_by_group.csv", replace
-    }
-    restore
-}
+preserve
+keep if is_entrant == 1
+collapse (mean) incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree, by(syear ever4DSW)
+save "replication/output/descriptives/entrant_trends_by_group.dta", replace
+export delimited using "replication/output/descriptives/entrant_trends_by_group.csv", replace
+restore
 
 * 6) Trend figures for retention outcomes.
-capture confirm file "replication/output/descriptives/retention_trends_by_group.dta"
-if _rc == 0 {
-    use "replication/output/descriptives/retention_trends_by_group.dta", clear
-    foreach y in stay_school_t1 stay_district_t1 exit_tx_public_t1 {
-        capture confirm variable `y'
-        if _rc == 0 {
-            twoway ///
-                (line `y' syear if ever4DSW == 0, sort lcolor(navy)) ///
-                (line `y' syear if ever4DSW == 1, sort lcolor(maroon)), ///
-                legend(order(1 "Never treated" 2 "Ever treated")) ///
-                xtitle("School year") ytitle("Mean `y'")
-            graph export "replication/output/figures/trend_`y'.png", replace width(1400) height(900)
-        }
-    }
+use "replication/output/descriptives/retention_trends_by_group.dta", clear
+foreach y in stay_school_t1 stay_district_t1 exit_tx_public_t1 {
+    twoway ///
+        (line `y' syear if ever4DSW == 0, sort lcolor(navy)) ///
+        (line `y' syear if ever4DSW == 1, sort lcolor(maroon)), ///
+        legend(order(1 "Never treated" 2 "Ever treated")) ///
+        xtitle("School year") ytitle("Mean `y'")
+    graph export "replication/output/figures/trend_`y'.png", replace width(1400) height(900)
 }

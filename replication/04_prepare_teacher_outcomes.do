@@ -1,6 +1,7 @@
 /*
 Description: Prepare teacher-year analysis file with t+1 transition outcomes.
 Run from project root.
+Fail fast on missing required variables.
 */
 
 version 17
@@ -25,6 +26,15 @@ use "`analysis_data'", clear
 capture mkdir "replication/output/intermediate"
 capture mkdir "replication/output/checks"
 
+foreach v in id2 syear district campus firstyear ever4DSW post_adoption event_time fte exper is_entrant incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+    capture confirm variable `v'
+    if _rc {
+        do "replication/utils/record_unavailable_analysis.do" "04_prepare" "teacher_outcome_prep" "`v'" "missing_required_variable"
+        di as error "Missing required variable `v' in `analysis_data'"
+        exit 459
+    }
+}
+
 keep if inrange(syear, 2017, 2024)
 
 quietly count
@@ -33,13 +43,7 @@ local n_before = r(N)
 capture noisily isid id2 syear
 if _rc {
     gen __orig_order = _n
-    capture confirm variable fte
-    if _rc == 0 {
-        gsort id2 syear -fte __orig_order
-    }
-    else {
-        sort id2 syear __orig_order
-    }
+    gsort id2 syear -fte __orig_order
     by id2 syear: keep if _n == 1
     drop __orig_order
 }
@@ -63,22 +67,6 @@ foreach v of local trans_vars {
         capture drop old_`v'
         clonevar old_`v' = `v'
     }
-}
-
-capture confirm variable ever4DSW
-if _rc {
-    gen ever4DSW = !missing(firstyear)
-}
-
-capture confirm variable post_adoption
-if _rc {
-    gen post_adoption = (syear >= firstyear) if !missing(firstyear)
-    replace post_adoption = 0 if missing(post_adoption)
-}
-
-capture confirm variable event_time
-if _rc {
-    gen event_time = syear - firstyear if !missing(firstyear)
 }
 
 sort id2 syear
@@ -113,41 +101,10 @@ gen turnover_teacher_t1 = 1 - stay_school_t1 if !missing(stay_school_t1)
 capture drop is_incumbent
 gen is_incumbent = !missing(stay_school_t1)
 
-capture confirm variable is_entrant
-if _rc {
-    by id2: egen __first_obs_year = min(syear)
-    gen is_entrant = (syear == __first_obs_year) if !missing(__first_obs_year)
-    drop __first_obs_year
-
-    local incoming_avail ""
-    foreach y in incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
-        capture confirm variable `y'
-        if _rc == 0 {
-            local incoming_avail "`incoming_avail' `y'"
-        }
-    }
-    if "`incoming_avail'" != "" {
-        egen __incoming_nonmiss = rownonmiss(`incoming_avail')
-        replace is_entrant = 1 if __incoming_nonmiss > 0
-        drop __incoming_nonmiss
-    }
-}
-
-capture confirm variable exper
-if _rc == 0 {
-    capture confirm variable exp_le5
-    if _rc {
-        gen exp_le5 = (exper <= 5) if !missing(exper)
-    }
-    capture confirm variable exp_gt5
-    if _rc {
-        gen exp_gt5 = (exper > 5) if !missing(exper)
-    }
-    capture confirm variable exp_gt9
-    if _rc {
-        gen exp_gt9 = (exper > 9) if !missing(exper)
-    }
-}
+capture drop exp_le5 exp_gt5 exp_gt9
+gen exp_le5 = (exper <= 5) if !missing(exper)
+gen exp_gt5 = (exper > 5) if !missing(exper)
+gen exp_gt9 = (exper > 9) if !missing(exper)
 
 tempfile mm
 tempname mmpost
