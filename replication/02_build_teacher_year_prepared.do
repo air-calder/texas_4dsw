@@ -107,7 +107,7 @@ drop if _merge == 2
 drop _merge
 
 * ==================== Classroom Characteristics ====================
-merge m:1 id2 syear using "replication/output/intermediate/classroom_controls_teacher_year.dta"
+merge 1:1 id2 syear using "replication/output/intermediate/classroom_controls_teacher_year.dta"
 drop if _merge == 2
 drop _merge
 
