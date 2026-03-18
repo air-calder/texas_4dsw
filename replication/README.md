@@ -25,23 +25,22 @@ do replication/00_master.do
 ```
 
 Or run modules manually in this order:
-1. `replication/02_build_teacher_year_analysis.do`
-2. `replication/04_prepare_teacher_outcomes.do`
-3. `replication/checks/01_data_integrity.do`
-4. `replication/checks/02_pretrend_checks.do`
-5. `replication/05_descriptives_teacher.do`
-6. `replication/06_teacher_retention_main.do`
-7. `replication/07_teacher_retention_eventstudy.do`
-8. `replication/08_teacher_retention_heterogeneity.do`
-9. `replication/09_teacher_entrant_sorting_main.do`
-10. `replication/10_teacher_entrant_eventstudy.do`
-11. `replication/11_teacher_robustness.do`
-12. `replication/12_tables_figures_teacher.do`
-13. `replication/13_unavailable_analyses_tally.do`
+1. `replication/01_build_teacher_year_prepared.do`
+2. `replication/checks/01_data_integrity.do`
+3. `replication/checks/02_pretrend_checks.do`
+4. `replication/02_descriptives_teacher.do`
+5. `replication/03_teacher_retention_main.do`
+6. `replication/04_teacher_retention_eventstudy.do`
+7. `replication/05_teacher_retention_heterogeneity.do`
+8. `replication/06_teacher_entrant_sorting_main.do`
+9. `replication/07_teacher_entrant_eventstudy.do`
+10. `replication/08_teacher_robustness.do`
+11. `replication/09_tables_figures_teacher.do`
+12. `replication/10_unavailable_analyses_tally.do`
 
 ### Outputs
 - `replication/output/intermediate/`: prepared teacher-year file
-- `replication/output/checks/`: integrity, duplicate handling, and pretrend diagnostics
+- `replication/output/checks/`: integrity and pretrend diagnostics
 - `replication/output/descriptives/`: sample tables and trend files
 - `replication/output/tables/`: model result CSVs and combined workbook
 - `replication/output/figures/`: trend and summary figures
@@ -58,7 +57,7 @@ Or run modules manually in this order:
 |---|---|---|---|
 | `data/clean/teacher_background.dta` | Available | `Code/teacher_background.do:135` | Explicitly saved by cleaning pipeline. |
 | `id2`, `syear`, `exper`, `first_cert_year`, `tier1`, `tier2`, `tier3`, `cert_alt` | Available | `Code/teacher_background.do:45`, `Code/teacher_background.do:86`, `Code/teacher_background.do:104`, `Code/teacher_background.do:121` | Explicitly generated/kept. |
-| `district`, `campus`, `fte`, `salary`, `sex` | Likely available | `Code/teacher_background.do` employee records are carried through to final save | Not explicitly regenerated in script, but expected from source TEA employee files. |
+| `district`, `campus`, `fte`, `totalpay`, `sex` | Likely available | `Code/teacher_background.do` employee records are carried through to final save | Not explicitly regenerated in script, but expected from source TEA employee files. |
 | `certified` | Derivable | `first_cert_year` from `Code/teacher_background.do:104` | Replication defines `certified = (syear >= first_cert_year)`. |
 | `data/clean/yearly_tracker_merge.dta` | Available | `Code/calendar_clean.do:190` | Core treatment timing file. |
 | `firstyear`, `ever4DSW`, `post_adoption`, `pct_four` | Available | `Code/calendar_clean.do:155`, `Code/calendar_clean.do:179`, `Code/calendar_clean.do:182` | Used for treatment, event timing, and hybrid flag construction. |
@@ -66,8 +65,8 @@ Or run modules manually in this order:
 | `District_Urbanicity` / `rural` source | Likely available | `Code/calendar_output.do:164` and `Code/calendar_clean.do:215` | `rural` can be derived from district urbanicity categories. |
 | `data/clean/vam_data_idsgroup1-4.dta` | Available | `Code/stu_tch_merge.do:183` | All four VAM slices are written in cleaning code. |
 | Classroom-control sources (`teachid`, `section_id`, `num_students`, `classx_frl`, `classx_white`, `classx_lag_*`) | Available | `Code/stu_tch_merge.do:53`, `Code/stu_tch_merge.do:124`, `Code/stu_tch_merge.do:175` | Used to build `class_size`, `class_frpl_share`, `class_nonwhite_share`, `class_prior_ach`. |
-| Entrant outcomes (`is_entrant`, `incoming_from_tx`, `incoming_first_time`, `incoming_experience`, `incoming_alt_path`) | Derived in replication | built in `replication/02_build_teacher_year_analysis.do` | Not explicitly produced as final vars in `Code/` outputs. |
-| Degree-based entrant outcomes (`incoming_adv_degree`, `incoming_no_degree`) | Possibly missing | no explicit degree-variable construction in `Code/teacher_background.do` | Replication tries to derive from degree fields if present; otherwise run fails. |
+| Entrant outcomes (`is_entrant`, `incoming_from_tx`, `incoming_first_time`, `incoming_experience`, `incoming_alt_path`) | Derived in replication | built in `replication/01_build_teacher_year_prepared.do` | Not explicitly produced as final vars in `Code/` outputs. |
+| Degree-based entrant outcomes (`incoming_adv_degree`, `incoming_no_degree`) | Available/derivable | `degree` is used in `replication/01_build_teacher_year_prepared.do` | Degree code mapping: 0 no degree, 1 bachelor's, 2 master's, 3 PhD. |
 | `adjacent_to_treated` | Missing | no adjacency construction in `Code/` | Requires an external district adjacency source. |
 
 This table is a code-based best guess from cleaning scripts and may differ from what is present in your local `.dta` files.

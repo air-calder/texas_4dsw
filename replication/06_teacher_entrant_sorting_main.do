@@ -11,7 +11,7 @@ local prepared_data "replication/output/intermediate/teacher_year_prepared.dta"
 use "`prepared_data'", clear
 capture mkdir "replication/output/tables"
 
-foreach v in id2 syear district campus is_entrant post_adoption female certified exper salary fte incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+foreach v in id2 syear district campus is_entrant post_adoption female certified exper totalpay fte incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
     capture confirm variable `v'
     if _rc {
         di as error "Missing required variable `v' in `prepared_data'"
@@ -33,7 +33,7 @@ foreach y in incoming_from_tx incoming_first_time incoming_alt_path incoming_exp
     }
 }
 
-local tcontrols "female certified exper salary fte"
+local tcontrols "female certified exper totalpay fte"
 
 tempfile results
 tempname posth

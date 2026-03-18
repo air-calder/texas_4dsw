@@ -12,7 +12,7 @@ use "`prepared_data'", clear
 capture mkdir "replication/output/descriptives"
 capture mkdir "replication/output/figures"
 
-foreach v in id2 syear district campus post_adoption ever4DSW is_incumbent is_entrant female certified exper salary fte class_size class_frpl_share class_nonwhite_share class_prior_ach stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+foreach v in id2 syear district campus post_adoption ever4DSW is_incumbent is_entrant female certified exper totalpay fte class_size class_frpl_share class_nonwhite_share class_prior_ach stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
     capture confirm variable `v'
     if _rc {
         di as error "Missing required variable `v' in `prepared_data'"
@@ -54,7 +54,7 @@ restore
 * 3) Pre-period balance means by ever-treated status.
 preserve
 keep if syear <= 2019
-collapse (mean) female certified exper salary fte class_size class_frpl_share class_nonwhite_share class_prior_ach stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1, by(ever4DSW)
+collapse (mean) female certified exper totalpay fte class_size class_frpl_share class_nonwhite_share class_prior_ach stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1, by(ever4DSW)
 export delimited using "replication/output/descriptives/preperiod_balance_means.csv", replace
 restore
 

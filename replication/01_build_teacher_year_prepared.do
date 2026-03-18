@@ -1,5 +1,5 @@
 /*
-Description: Build teacher-year analysis file from cleaned Code/ outputs.
+Description: Build teacher-year prepared file from cleaned Code/ outputs.
 Run from project root.
 Fail fast on missing required inputs.
 */
@@ -13,7 +13,7 @@ capture mkdir "replication/output/checks"
 * Teacher-year base from teacher_background.
 use "data/clean/teacher_background.dta", clear
 
-foreach v in id2 syear district campus exper fte salary first_cert_year sex {
+foreach v in id2 syear district campus exper fte totalpay first_cert_year sex degree {
     capture confirm variable `v'
     if _rc {
         di as error "Missing required variable `v' in data/clean/teacher_background.dta"
@@ -48,11 +48,20 @@ if _rc {
     }
 }
 
-capture confirm numeric variable salary
+capture confirm numeric variable totalpay
 if _rc {
-    capture noisily destring salary, replace ignore(",$")
+    capture noisily destring totalpay, replace ignore(",$")
     if _rc {
-        di as error "Variable salary must be numeric or cleanly destringable in data/clean/teacher_background.dta"
+        di as error "Variable totalpay must be numeric or cleanly destringable in data/clean/teacher_background.dta"
+        exit 459
+    }
+}
+
+capture confirm numeric variable degree
+if _rc {
+    capture noisily destring degree, replace
+    if _rc {
+        di as error "Variable degree must be numeric or cleanly destringable in data/clean/teacher_background.dta"
         exit 459
     }
 }
@@ -89,68 +98,8 @@ gen incoming_experience = exper if is_entrant == 1
 gen incoming_alt_path = cert_alt if is_entrant == 1
 replace incoming_alt_path = 0 if is_entrant == 1 & missing(incoming_alt_path)
 
-gen incoming_adv_degree = .
-gen incoming_no_degree = .
-
-local adv_src ""
-foreach v in adv_degree has_adv_degree advanced_degree graduate_degree masters doctorate phd {
-    capture confirm variable `v'
-    if _rc == 0 & "`adv_src'" == "" {
-        local adv_src "`v'"
-    }
-}
-
-local nodeg_src ""
-foreach v in no_degree has_no_degree degree_none no_bachelor {
-    capture confirm variable `v'
-    if _rc == 0 & "`nodeg_src'" == "" {
-        local nodeg_src "`v'"
-    }
-}
-
-if "`adv_src'" != "" {
-    replace incoming_adv_degree = `adv_src' if is_entrant == 1
-}
-if "`nodeg_src'" != "" {
-    replace incoming_no_degree = `nodeg_src' if is_entrant == 1
-}
-
-quietly count if is_entrant == 1 & !missing(incoming_adv_degree)
-local has_adv = (r(N) > 0)
-quietly count if is_entrant == 1 & !missing(incoming_no_degree)
-local has_nodeg = (r(N) > 0)
-
-if !`has_adv' | !`has_nodeg' {
-    local degree_text ""
-    foreach v in degree highest_degree degree_level deg_level {
-        capture confirm variable `v'
-        if _rc == 0 & "`degree_text'" == "" {
-            local degree_text "`v'"
-        }
-    }
-
-    if "`degree_text'" == "" {
-        di as error "Need degree information to build incoming_adv_degree and incoming_no_degree"
-        exit 459
-    }
-
-    capture confirm string variable `degree_text'
-    if _rc {
-        di as error "Degree source variable `degree_text' must be string to parse advanced/no degree"
-        exit 459
-    }
-
-    gen __deg_text = upper(trim(`degree_text'))
-    if !`has_adv' {
-        replace incoming_adv_degree = 1 if is_entrant == 1 & (strpos(__deg_text, "MASTER") > 0 | strpos(__deg_text, "DOCTOR") > 0 | strpos(__deg_text, "PHD") > 0 | strpos(__deg_text, "GRAD") > 0)
-        replace incoming_adv_degree = 0 if is_entrant == 1 & __deg_text != "" & missing(incoming_adv_degree)
-    }
-    if !`has_nodeg' {
-        replace incoming_no_degree = 1 if is_entrant == 1 & (strpos(__deg_text, "NO DEG") > 0 | strpos(__deg_text, "NONE") > 0 | strpos(__deg_text, "LESS") > 0)
-        replace incoming_no_degree = 0 if is_entrant == 1 & __deg_text != "" & missing(incoming_no_degree)
-    }
-    drop __deg_text
-}
+gen incoming_adv_degree = inlist(degree, 2, 3) if is_entrant == 1 & !missing(degree)
+gen incoming_no_degree = (degree == 0) if is_entrant == 1 & !missing(degree)
 
 quietly count if is_entrant == 1 & !missing(incoming_alt_path)
 if r(N) == 0 {
@@ -284,7 +233,6 @@ forvalues i = 1/4 {
 
     keep teachid syear section_id class_size class_frpl_share class_nonwhite_share class_prior_ach
     drop if missing(teachid) | missing(syear)
-    collapse (firstnm) class_size class_frpl_share class_nonwhite_share class_prior_ach, by(teachid syear section_id)
     collapse (mean) class_size class_frpl_share class_nonwhite_share class_prior_ach, by(teachid syear)
 
     gen id2 = teachid
@@ -323,7 +271,7 @@ foreach v in class_size class_frpl_share class_nonwhite_share class_prior_ach {
     }
 }
 
-foreach v in id2 syear district campus firstyear ever4DSW post_adoption pct_four event_time hybrid_calendar rural female certified exper salary fte is_entrant incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+foreach v in id2 syear district campus firstyear ever4DSW post_adoption pct_four event_time hybrid_calendar rural female certified exper totalpay fte is_entrant incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
     capture confirm variable `v'
     if _rc {
         di as error "Missing final required variable `v'"
@@ -333,3 +281,35 @@ foreach v in id2 syear district campus firstyear ever4DSW post_adoption pct_four
 
 sort id2 syear
 save "replication/output/intermediate/teacher_year_analysis.dta", replace
+
+* Build t+1 outcomes and final prepared dataset.
+keep if inrange(syear, 2017, 2024)
+
+isid id2 syear
+sort id2 syear
+tsset id2 syear
+
+quietly summarize syear, meanonly
+local max_year = r(max)
+
+gen observed_t1 = !missing(F.syear) if syear < `max_year'
+
+gen stay_school_t1 = (observed_t1 == 1 & F.campus == campus) if syear < `max_year'
+replace stay_school_t1 = 0 if syear < `max_year' & observed_t1 == 1 & F.campus != campus
+
+gen stay_district_t1 = (observed_t1 == 1 & F.district == district) if syear < `max_year'
+replace stay_district_t1 = 0 if syear < `max_year' & observed_t1 == 1 & F.district != district
+
+gen switch_district_t1 = (observed_t1 == 1 & F.district != district) if syear < `max_year'
+replace switch_district_t1 = 0 if syear < `max_year' & observed_t1 == 1 & F.district == district
+
+gen exit_tx_public_t1 = (observed_t1 == 0) if syear < `max_year'
+gen turnover_teacher_t1 = 1 - stay_school_t1 if !missing(stay_school_t1)
+gen is_incumbent = !missing(stay_school_t1)
+
+gen exp_le5 = (exper <= 5) if !missing(exper)
+gen exp_gt5 = (exper > 5) if !missing(exper)
+gen exp_gt9 = (exper > 9) if !missing(exper)
+
+sort id2 syear
+save "replication/output/intermediate/teacher_year_prepared.dta", replace

@@ -6,28 +6,29 @@ district_id,district,teacher_background.dta,yes,Current district in year t
 adopt_year,firstyear,yearly_tracker_merge.dta,yes,First 4DSW adoption year
 treated,post_adoption,yearly_tracker_merge.dta,yes,1 if treated in current year
 ever_treated,ever4DSW,yearly_tracker_merge.dta,yes,1 if ever treated in panel
-event_time,event_time,derived in 02_build,yes,syear - firstyear
-hybrid_calendar,hybrid_calendar,derived in 02_build,no,Treated with 0<pct_four<1
+event_time,event_time,derived in 01_build,yes,syear - firstyear
+hybrid_calendar,hybrid_calendar,derived in 01_build,no,Treated with 0<pct_four<1
 rural,rural,ccd_district_weighted.dta or derived,no,Rural district indicator
 fte,fte,teacher_background.dta,no,Used for duplicate resolution
+totalpay,totalpay,teacher_background.dta,no,Teacher total compensation
 experience,exper,teacher_background.dta,no,Years of experience
 female,female,teacher_background.dta,no,Teacher gender indicator
-certified,tier1/tier2/tier3 or ever_cert,teacher_background.dta,no,Certification indicator
+certified,first_cert_year,teacher_background.dta,no,Certification indicator where syear >= first_cert_year
 class_size,class_size,vam_data_idsgroup1-4.dta derived,no,Teacher-year class size
 class_frpl_share,class_frpl_share,vam_data_idsgroup1-4.dta derived,no,Teacher-year FRPL share
 class_nonwhite_share,class_nonwhite_share,vam_data_idsgroup1-4.dta derived,no,Teacher-year nonwhite share
 class_prior_ach,class_prior_ach,vam_data_idsgroup1-4.dta derived,no,Teacher-year prior achievement
-stay_school_t1,stay_school_t1,derived in 04_prepare,derived,Primary retention outcome
-stay_district_t1,stay_district_t1,derived in 04_prepare,derived,District retention outcome
-switch_district_t1,switch_district_t1,derived in 04_prepare,derived,District switching outcome
-exit_tx_public_t1,exit_tx_public_t1,derived in 04_prepare,derived,Exit TX public outcome
-observed_t1,observed_t1,derived in 04_prepare,derived,Observed next year indicator
-turnover_teacher_t1,turnover_teacher_t1,derived in 04_prepare,derived,1 - stay_school_t1
-is_incumbent,is_incumbent,derived in 04_prepare,derived,Retention sample flag
-is_entrant,is_entrant,derived in 02_build/04_prepare,derived,Entrant sample flag
-incoming_from_tx,incoming_from_tx,derived in 02_build,derived,Entrant from another TX district
-incoming_first_time,incoming_first_time,derived in 02_build,derived,Entrant first-time teacher
-incoming_alt_path,incoming_alt_path,derived in 02_build,derived,Entrant alt-path proxy
-incoming_experience,incoming_experience,derived in 02_build,derived,Entrant experience
-incoming_adv_degree,incoming_adv_degree,derived in 02_build if possible,optional,Missing when degree fields unavailable
-incoming_no_degree,incoming_no_degree,derived in 02_build if possible,optional,Missing when degree fields unavailable
+stay_school_t1,stay_school_t1,derived in 01_build,derived,Primary retention outcome
+stay_district_t1,stay_district_t1,derived in 01_build,derived,District retention outcome
+switch_district_t1,switch_district_t1,derived in 01_build,derived,District switching outcome
+exit_tx_public_t1,exit_tx_public_t1,derived in 01_build,derived,Exit TX public outcome
+observed_t1,observed_t1,derived in 01_build,derived,Observed next year indicator
+turnover_teacher_t1,turnover_teacher_t1,derived in 01_build,derived,1 - stay_school_t1
+is_incumbent,is_incumbent,derived in 01_build,derived,Retention sample flag
+is_entrant,is_entrant,derived in 01_build,derived,Entrant sample flag
+incoming_from_tx,incoming_from_tx,derived in 01_build,derived,Entrant from another TX district
+incoming_first_time,incoming_first_time,derived in 01_build,derived,Entrant first-time teacher
+incoming_alt_path,incoming_alt_path,derived in 01_build,derived,Entrant alt-path proxy from cert_alt
+incoming_experience,incoming_experience,derived in 01_build,derived,Entrant experience
+incoming_adv_degree,incoming_adv_degree,derived in 01_build,derived,Entrant has degree code 2 or 3
+incoming_no_degree,incoming_no_degree,derived in 01_build,derived,Entrant has degree code 0
