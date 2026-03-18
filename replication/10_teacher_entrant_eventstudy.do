@@ -21,7 +21,6 @@ capture mkdir "replication/output/tables"
 foreach v in id2 syear district campus is_entrant event_time incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "10_entrant_eventstudy" "entrant_eventstudy_models" "`v'" "missing_required_variable"
         di as error "Missing required variable `v' in `prepared_data'"
         exit 459
     }
@@ -29,7 +28,6 @@ foreach v in id2 syear district campus is_entrant event_time incoming_from_tx in
 
 quietly count if is_entrant == 1
 if r(N) == 0 {
-    do "replication/utils/record_unavailable_analysis.do" "10_entrant_eventstudy" "entrant_eventstudy_models" "is_entrant" "entrant_sample_has_zero_rows"
     di as error "Entrant sample has zero rows"
     exit 459
 }
@@ -37,7 +35,6 @@ if r(N) == 0 {
 foreach y in incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
     quietly count if is_entrant == 1 & !missing(`y')
     if r(N) == 0 {
-        do "replication/utils/record_unavailable_analysis.do" "10_entrant_eventstudy" "entrant_eventstudy_models" "`y'" "entrant_outcome_all_missing_in_sample"
         di as error "Entrant outcome `y' is all missing in entrant sample"
         exit 459
     }

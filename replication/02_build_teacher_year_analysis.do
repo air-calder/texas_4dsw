@@ -12,21 +12,18 @@ capture mkdir "replication/output/checks"
 
 capture confirm file "data/clean/teacher_background.dta"
 if _rc {
-    do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "data/clean/teacher_background.dta" "missing_clean_teacher_file"
     di as error "Missing cleaned teacher file: data/clean/teacher_background.dta"
     exit 601
 }
 
 capture confirm file "data/clean/yearly_tracker_merge.dta"
 if _rc {
-    do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "data/clean/yearly_tracker_merge.dta" "missing_clean_calendar_file"
     di as error "Missing cleaned calendar file: data/clean/yearly_tracker_merge.dta"
     exit 601
 }
 
 capture confirm file "data/clean/ccd_district_weighted.dta"
 if _rc {
-    do "replication/utils/record_unavailable_analysis.do" "02_build" "robustness_flags" "data/clean/ccd_district_weighted.dta" "missing_rural_source_file"
     di as error "Missing rural source file: data/clean/ccd_district_weighted.dta"
     exit 601
 }
@@ -34,7 +31,6 @@ if _rc {
 forvalues i = 1/4 {
     capture confirm file "data/clean/vam_data_idsgroup`i'.dta"
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "classroom_controls" "data/clean/vam_data_idsgroup`i'.dta" "missing_vam_file"
         di as error "Missing VAM input file: data/clean/vam_data_idsgroup`i'.dta"
         exit 601
     }
@@ -46,7 +42,6 @@ use "data/clean/teacher_background.dta", clear
 foreach v in id2 syear district campus exper fte salary first_cert_year {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "`v'" "missing_required_variable_in_teacher_file"
         di as error "Missing required variable `v' in data/clean/teacher_background.dta"
         exit 459
     }
@@ -56,7 +51,6 @@ capture confirm numeric variable syear
 if _rc {
     capture noisily destring syear, replace
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "syear" "syear_not_numeric"
         di as error "Variable syear must be numeric or cleanly destringable in data/clean/teacher_background.dta"
         exit 459
     }
@@ -66,7 +60,6 @@ capture confirm numeric variable exper
 if _rc {
     capture noisily destring exper, replace
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "exper" "exper_not_numeric"
         di as error "Variable exper must be numeric or cleanly destringable in data/clean/teacher_background.dta"
         exit 459
     }
@@ -76,7 +69,6 @@ capture confirm numeric variable fte
 if _rc {
     capture noisily destring fte, replace
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "fte" "fte_not_numeric"
         di as error "Variable fte must be numeric or cleanly destringable in data/clean/teacher_background.dta"
         exit 459
     }
@@ -86,7 +78,6 @@ capture confirm numeric variable salary
 if _rc {
     capture noisily destring salary, replace ignore(",$")
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "salary" "salary_not_numeric"
         di as error "Variable salary must be numeric or cleanly destringable in data/clean/teacher_background.dta"
         exit 459
     }
@@ -96,7 +87,6 @@ capture confirm numeric variable first_cert_year
 if _rc {
     capture noisily destring first_cert_year, replace
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "first_cert_year" "first_cert_year_not_numeric"
         di as error "Variable first_cert_year must be numeric or cleanly destringable in data/clean/teacher_background.dta"
         exit 459
     }
@@ -106,7 +96,6 @@ capture confirm variable female
 if _rc {
     capture confirm variable sex
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "female/sex" "missing_gender_source"
         di as error "Need female or sex in data/clean/teacher_background.dta"
         exit 459
     }
@@ -151,7 +140,6 @@ if _rc {
             gen incoming_alt_path = tier2 if is_entrant == 1
         }
         else {
-            do "replication/utils/record_unavailable_analysis.do" "02_build" "entrant_outcomes" "incoming_alt_path" "missing_alt_certification_proxy"
             di as error "Need incoming_alt_path, cert_alt, or tier2 in data/clean/teacher_background.dta"
             exit 459
         }
@@ -199,14 +187,12 @@ if !`have_adv' | !`have_nodeg' {
         }
 
         if "`degree_text'" == "" {
-            do "replication/utils/record_unavailable_analysis.do" "02_build" "entrant_outcomes" "incoming_adv_degree/incoming_no_degree" "missing_degree_information"
             di as error "Need degree information to build incoming_adv_degree and incoming_no_degree"
             exit 459
         }
 
         capture confirm string variable `degree_text'
         if _rc {
-            do "replication/utils/record_unavailable_analysis.do" "02_build" "entrant_outcomes" "`degree_text'" "degree_variable_not_string"
             di as error "Degree source variable `degree_text' must be string to parse advanced/no degree"
             exit 459
         }
@@ -228,19 +214,16 @@ if !`have_adv' | !`have_nodeg' {
 
 quietly count if is_entrant == 1 & !missing(incoming_alt_path)
 if r(N) == 0 {
-    do "replication/utils/record_unavailable_analysis.do" "02_build" "entrant_outcomes" "incoming_alt_path" "entrant_outcome_all_missing"
     di as error "incoming_alt_path is missing for all entrant rows"
     exit 459
 }
 quietly count if is_entrant == 1 & !missing(incoming_adv_degree)
 if r(N) == 0 {
-    do "replication/utils/record_unavailable_analysis.do" "02_build" "entrant_outcomes" "incoming_adv_degree" "entrant_outcome_all_missing"
     di as error "incoming_adv_degree is missing for all entrant rows"
     exit 459
 }
 quietly count if is_entrant == 1 & !missing(incoming_no_degree)
 if r(N) == 0 {
-    do "replication/utils/record_unavailable_analysis.do" "02_build" "entrant_outcomes" "incoming_no_degree" "entrant_outcome_all_missing"
     di as error "incoming_no_degree is missing for all entrant rows"
     exit 459
 }
@@ -256,7 +239,6 @@ use "data/clean/yearly_tracker_merge.dta", clear
 foreach v in district school_year firstyear ever4DSW post_adoption pct_four {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "`v'" "missing_required_variable_in_calendar_file"
         di as error "Missing required variable `v' in data/clean/yearly_tracker_merge.dta"
         exit 459
     }
@@ -266,7 +248,6 @@ capture confirm numeric variable school_year
 if _rc {
     capture noisily destring school_year, replace
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "school_year" "school_year_not_numeric"
         di as error "school_year must be numeric or cleanly destringable in data/clean/yearly_tracker_merge.dta"
         exit 459
     }
@@ -286,7 +267,6 @@ use "data/clean/ccd_district_weighted.dta", clear
 
 capture confirm variable district
 if _rc {
-    do "replication/utils/record_unavailable_analysis.do" "02_build" "robustness_flags" "district" "missing_district_in_rural_file"
     di as error "rural source must include district"
     exit 459
 }
@@ -295,7 +275,6 @@ capture confirm variable school_year
 if _rc {
     capture confirm variable year
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "robustness_flags" "school_year/year" "missing_year_in_rural_file"
         di as error "rural source must include school_year or year"
         exit 459
     }
@@ -306,7 +285,6 @@ capture confirm numeric variable school_year
 if _rc {
     capture noisily destring school_year, replace
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "robustness_flags" "school_year" "school_year_not_numeric_in_rural_file"
         di as error "school_year in rural source must be numeric or cleanly destringable"
         exit 459
     }
@@ -316,7 +294,6 @@ capture confirm variable rural
 if _rc {
     capture confirm variable District_Urbanicity
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "robustness_flags" "rural/District_Urbanicity" "missing_rural_indicator_source"
         di as error "Need rural or District_Urbanicity in data/clean/ccd_district_weighted.dta"
         exit 459
     }
@@ -334,7 +311,6 @@ use "`calendar_panel'", clear
 merge 1:1 district syear using "`rural_panel'"
 quietly count if _merge != 3
 if r(N) > 0 {
-    do "replication/utils/record_unavailable_analysis.do" "02_build" "robustness_flags" "rural" "incomplete_rural_merge"
     di as error "Rural merge to calendar panel is incomplete; unmatched district-year rows found"
     exit 459
 }
@@ -346,7 +322,6 @@ use "`teacher_panel'", clear
 merge m:1 district syear using "`calendar_panel'"
 quietly count if _merge == 1
 if r(N) > 0 {
-    do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "calendar merge" "teacher_rows_missing_calendar_match"
     di as error "Teacher rows without matching district-year timing rows found"
     exit 459
 }
@@ -366,7 +341,6 @@ forvalues i = 1/4 {
     foreach v in teachid syear {
         capture confirm variable `v'
         if _rc {
-            do "replication/utils/record_unavailable_analysis.do" "02_build" "classroom_controls" "`v'" "missing_required_variable_in_vam_file"
             di as error "Missing `v' in data/clean/vam_data_idsgroup`i'.dta"
             exit 459
         }
@@ -376,7 +350,6 @@ forvalues i = 1/4 {
     if _rc {
         capture confirm variable class_id
         if _rc {
-            do "replication/utils/record_unavailable_analysis.do" "02_build" "classroom_controls" "section_id/class_id" "missing_section_identifier_in_vam_file"
             di as error "Need section_id or class_id in data/clean/vam_data_idsgroup`i'.dta"
             exit 459
         }
@@ -387,7 +360,6 @@ forvalues i = 1/4 {
     if _rc {
         capture confirm variable classx_frl
         if _rc {
-            do "replication/utils/record_unavailable_analysis.do" "02_build" "classroom_controls" "class_frpl_share/classx_frl" "missing_frpl_source_in_vam_file"
             di as error "Need class_frpl_share or classx_frl in data/clean/vam_data_idsgroup`i'.dta"
             exit 459
         }
@@ -404,7 +376,6 @@ forvalues i = 1/4 {
             foreach v in classx_black classx_hispanic classx_asian classx_other {
                 capture confirm variable `v'
                 if _rc {
-                    do "replication/utils/record_unavailable_analysis.do" "02_build" "classroom_controls" "class_nonwhite_share" "missing_race_shares_in_vam_file"
                     di as error "Need class_nonwhite_share or race-share variables in data/clean/vam_data_idsgroup`i'.dta"
                     exit 459
                 }
@@ -421,7 +392,6 @@ forvalues i = 1/4 {
         local has_m = (_rc == 0)
 
         if !`has_r' & !`has_m' {
-            do "replication/utils/record_unavailable_analysis.do" "02_build" "classroom_controls" "class_prior_ach" "missing_lag_achievement_source_in_vam_file"
             di as error "Need class_prior_ach or lag achievement variables in data/clean/vam_data_idsgroup`i'.dta"
             exit 459
         }
@@ -446,7 +416,6 @@ forvalues i = 1/4 {
         else {
             capture confirm variable id1
             if _rc {
-                do "replication/utils/record_unavailable_analysis.do" "02_build" "classroom_controls" "class_size" "missing_class_size_source_in_vam_file"
                 di as error "Need class_size, num_students, or id1 with section_id in data/clean/vam_data_idsgroup`i'.dta"
                 exit 459
             }
@@ -487,13 +456,11 @@ drop _merge
 foreach v in class_size class_frpl_share class_nonwhite_share class_prior_ach {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "classroom_controls" "`v'" "failed_to_construct_classroom_control"
         di as error "Missing classroom control `v' after VAM merge"
         exit 459
     }
     quietly count if !missing(`v')
     if r(N) == 0 {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "classroom_controls" "`v'" "classroom_control_all_missing"
         di as error "Classroom control `v' is all missing after VAM merge"
         exit 459
     }
@@ -502,7 +469,6 @@ foreach v in class_size class_frpl_share class_nonwhite_share class_prior_ach {
 foreach v in id2 syear district campus firstyear ever4DSW post_adoption pct_four event_time hybrid_calendar rural female certified exper salary fte is_entrant incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_build" "analysis_panel_build" "`v'" "missing_final_required_variable"
         di as error "Missing final required variable `v'"
         exit 459
     }

@@ -19,7 +19,6 @@ capture mkdir "replication/output/checks"
 foreach v in is_incumbent ever4DSW event_time syear stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "02_pretrend" "pretrend_checks" "`v'" "missing_required_variable"
         di as error "Missing required variable `v' in `prepared_data'"
         exit 459
     }

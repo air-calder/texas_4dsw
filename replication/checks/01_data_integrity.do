@@ -20,7 +20,6 @@ local required "id2 campus district syear post_adoption ever4DSW firstyear event
 foreach v of local required {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "01_integrity" "data_integrity_checks" "`v'" "missing_required_variable"
         di as error "Missing required variable `v' in `prepared_data'"
         exit 459
     }
@@ -28,7 +27,6 @@ foreach v of local required {
 
 capture noisily isid id2 syear
 if _rc {
-    do "replication/utils/record_unavailable_analysis.do" "01_integrity" "data_integrity_checks" "id2+syear" "teacher_year_key_not_unique"
     di as error "Teacher-year key id2 x syear is not unique"
     exit 459
 }

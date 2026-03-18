@@ -16,7 +16,6 @@ if _rc {
 
 capture confirm file "`analysis_data'"
 if _rc {
-    do "replication/utils/record_unavailable_analysis.do" "04_prepare" "teacher_outcome_prep" "`analysis_data'" "analysis_data_missing_after_build"
     di as error "Missing analysis dataset: `analysis_data'"
     exit 601
 }
@@ -29,7 +28,6 @@ capture mkdir "replication/output/checks"
 foreach v in id2 syear district campus firstyear ever4DSW post_adoption event_time fte exper is_entrant incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "04_prepare" "teacher_outcome_prep" "`v'" "missing_required_variable"
         di as error "Missing required variable `v' in `analysis_data'"
         exit 459
     }

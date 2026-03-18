@@ -20,7 +20,6 @@ capture mkdir "replication/output/figures"
 foreach v in id2 syear district campus post_adoption ever4DSW is_incumbent is_entrant female certified exper salary fte class_size class_frpl_share class_nonwhite_share class_prior_ach stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t1 incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "05_descriptives" "descriptive_outputs" "`v'" "missing_required_variable"
         di as error "Missing required variable `v' in `prepared_data'"
         exit 459
     }

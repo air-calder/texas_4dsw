@@ -19,7 +19,6 @@ capture mkdir "replication/output/tables"
 foreach v in id2 syear district campus is_incumbent post_adoption rural hybrid_calendar stay_school_t1 stay_district_t1 {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "11_robustness" "robustness_models" "`v'" "missing_required_variable"
         di as error "Missing required variable `v' in `prepared_data'"
         exit 459
     }
@@ -28,7 +27,6 @@ foreach v in id2 syear district campus is_incumbent post_adoption rural hybrid_c
 foreach y in stay_school_t1 stay_district_t1 {
     quietly count if is_incumbent == 1 & !missing(`y')
     if r(N) == 0 {
-        do "replication/utils/record_unavailable_analysis.do" "11_robustness" "robustness_models" "`y'" "no_nonmissing_outcome_in_incumbent_sample"
         di as error "Outcome `y' has no nonmissing values in incumbent sample"
         exit 459
     }

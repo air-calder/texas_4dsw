@@ -12,7 +12,6 @@ capture mkdir "replication/output/figures"
 foreach f in replication/output/tables/teacher_retention_main.csv replication/output/tables/teacher_retention_eventstudy.csv replication/output/tables/teacher_retention_heterogeneity.csv replication/output/tables/teacher_entrant_main.csv replication/output/tables/teacher_entrant_eventstudy.csv replication/output/tables/teacher_robustness.csv replication/output/descriptives/retention_trends_by_group.dta {
     capture confirm file "`f'"
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "12_tables_figures" "final_outputs" "`f'" "missing_required_input_file"
         di as error "Missing required file: `f'"
         exit 601
     }
@@ -42,7 +41,6 @@ use "replication/output/descriptives/retention_trends_by_group.dta", clear
 foreach v in syear ever4DSW stay_school_t1 stay_district_t1 exit_tx_public_t1 {
     capture confirm variable `v'
     if _rc {
-        do "replication/utils/record_unavailable_analysis.do" "12_tables_figures" "final_outputs" "`v'" "missing_required_variable_in_trend_file"
         di as error "Missing required variable `v' in retention trends file"
         exit 459
     }
