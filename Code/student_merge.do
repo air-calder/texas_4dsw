@@ -16,19 +16,19 @@ global clean "E:/projects/2403-Evidence/project/data/clean"
 foreach x in enroll_demog attend_demog tests {
 	use "$clean/stu_`x'", clear
 	preserve
-		keep if id1_num<=XXX
+		keep if id1_num<=5694176
 		save "$clean/stu_`x'_idsgroup1", replace
 	restore
 	preserve
-		keep if id1_num>XXX & id1_num<=XXX
+		keep if id1_num>5694176 & id1_num<=13697170
 		save "$clean/stu_`x'_idsgroup2", replace
 	restore
 	preserve
-		keep if id1_num>XXX & id1_num<=XXX 
+		keep if id1_num>13697170 & id1_num<=17100743 
 		save "$clean/stu_`x'_idsgroup3", replace
 	restore
 		preserve
-		keep if id1_num>XXX
+		keep if id1_num>17100743
 		save "$clean/stu_`x'_idsgroup4", replace
 	restore
 }

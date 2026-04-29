@@ -6,6 +6,7 @@ Notes: need to clear out space on the disk in order to run all of this code
 
 clear
 set max_memory 100g
+
 // Must redirect working directory from personal folder to project folder
 cd "E:\projects\2403-Evidence\project"
 
@@ -23,7 +24,7 @@ Classroom Role
 3	Support Teacher
 4	Substitute Teacher
 5	PK Classroom Aide
-*/
+
 
 // 2012-2019 ran and saved individually.
 forvalues y = 12 / 19 {
@@ -116,12 +117,12 @@ forvalues y = 20 / 21 {
 	drop if _merge==2 // drop any courses that didn't have students or teachers 
 	drop _merge
 	gen syear = 20`y'
-	
+		
 	save "$intermediate/links_20`y'", replace
 }
 
 // 2022 and 2023. we're back to separate files for teacher and student_id1
-forvalues y = 22 / 23 {
+forvalues y = 22 / 25 { 
 	* student
 	use "E:\projects\2403-Evidence\NewFilesReleased\TEA\p_class_roster_student_wntr`y'", clear
 	rename *, lower
@@ -143,7 +144,7 @@ forvalues y = 22 / 23 {
 	
 	* keep teacher of record
 	tab classroom_position
-	keep if classroom_position == "Teacher of Record"
+	keep if classroom_position == "Teacher of Record" | classroom_position == "Teacher Of Record"
 	
 	* keep teachers (not subs)
 	tab role_id
@@ -177,22 +178,80 @@ forvalues y = 22 / 23 {
 	drop if _merge==2 // drop any courses that didn't have students or teachers 
 	drop _merge
 	gen syear = 20`y'
-
+		
 	save "$intermediate/links_20`y'", replace
 	
 	}
 	
-/* Step 3. Append everything together and make sure variables are consistent across years
+Step 3. Append everything together and make sure variables are consistent across years
 */
 clear
-forvalues y = 12 / 23 {
+forvalues y = 15 / 25 { // unable to include 2012-2025 due to memory
 	append using "E:\projects\2403-Evidence\project\data\intermediate\links_20`y'"
 }	
+memory
+compress
+memory 
 
 // Final clean
 drop subj_subcat
 
-// Final save
-compress
+*E:\master_data\ERC_TEA Documents\p_subject_2008-2015
+// Generate variables for subjects taught. 
+gen teach_math = subject == "10"
+gen teach_reading = inlist(subject, "22", "27")
+gen teach_science = subject == "9"
+gen teach_socialstudies = subject == "38"
+gen teach_other = !inlist(subject, "10", "22", "27", "9", "38") 
+
+// Generate variables for grades taught.
+// Note: grade_level is wonky and these odd values occur within the same year across most years i.e. "40" "45" "04". In Gates, we didn't resolve or even destring this variable because we drop it in stu_tch_merge. 
+// ideally we want to find codebook for this to understand what these 30+ codes mean. potentially secondary classes. as long as we know what they mean we can keep them. potentially keep KG but not PK. 
+//tab grade_level, m
+// GRADE_LEVEL |      Freq.     Percent        Cum.
+// ------------+-----------------------------------
+//          01 | 31,393,123        5.28        5.28
+//          02 | 33,260,210        5.60       10.88
+//          03 | 33,955,056        5.72       16.60
+//          04 | 34,107,408        5.74       22.34
+//          05 | 33,372,889        5.62       27.96
+//          06 | 29,001,188        4.88       32.84
+//          07 | 24,603,507        4.14       36.98
+//          08 | 22,244,814        3.74       40.72
+//          30 | 73,793,925       12.42       53.14
+//          40 | 56,373,239        9.49       62.63
+//          45 |188,465,275       31.72       94.36
+//          50 |     62,358        0.01       94.37
+//          60 |     21,586        0.00       94.37
+//          70 | 23,570,449        3.97       98.34
+//          KG |  8,093,567        1.36       99.70
+//          PK |  1,786,017        0.30      100.00
+// ------------+-----------------------------------
+//       Total |594,104,611      100.00
+replace grade_level = "00" if grade_level == "KG"
+replace grade_level = "-01" if grade_level == "PK"
+destring grade_level, replace
+
+// By teacher id and school year get the maximum of the subject variables and grades taught.
+foreach var in teach_math teach_reading teach_science teach_socialstudies teach_other {
+	bys teachid syear: egen max_`var' = max(`var') 
+} 
+drop teach_math teach_reading teach_science teach_socialstudies teach_other
+rename (max_teach_math max_teach_reading max_teach_science max_teach_socialstudies max_teach_other) (teach_math teach_reading teach_science teach_socialstudies teach_other)
+bys teachid syear: egen tch_grade_min = min(grade_level)
+bys teachid syear: egen tch_grade_max = max(grade_level)
+bys teachid syear: egen tch_grade_mode = mode(grade_level), minmode
+
+// Save all subjects. 
 destring id1, gen(id1_num)
+save "$clean/stu_tch_links_allsubjects", replace
+
+// Keep math and ELA/reading
+keep if inlist(subject, ///
+	"98", ///		// Elementary
+	"10", /// 		// Math
+	"22", ///		// ELA
+	"27")			// Reading
+		
+// Save only subjects in code block above. 
 save "$clean/stu_tch_links", replace

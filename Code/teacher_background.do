@@ -2,7 +2,7 @@
 Description: Create dataset with student attendance data for 4DSW project - using Alejandra's code from Gates Math TX
 Author: Jamie Klinenberg
 */
-
+clear all
 set max_memory 100g
 
 // Must redirect working directory from personal folder to project folder
@@ -13,7 +13,7 @@ global last_year 2024
 global intermediate "E:/projects/2403-Evidence/project/data/intermediate"
 global clean "E:/projects/2403-Evidence/project/data/clean"
 
-/*****************1. Employee demographic files merge with employee data (2003-2009) ************/
+/*****************1. Employee demographic files merge with employee data (2003-2009) ************
 	
 forvalues y = 2000 / $last_year {
 
@@ -46,7 +46,7 @@ forvalues y = 2000 / $last_year {
 		save "$intermediate/teacher_`y'", replace
 	}
 
-/***** 2. Append together employee files only and demographic files ///////////////////// */
+***** 2. Append together employee files only and demographic files ///////////////////// */
 
 	clear
 	forvalues y = 2000 / $last_year {
@@ -54,19 +54,18 @@ forvalues y = 2000 / $last_year {
 	}
 	
 	// One odd duplicate observation causing id1 necessary for uniqueness
-	drop if id2 == "XXX" & id1 == ""
+	drop if id2 == "011144671" & id1 == ""
 	unique syear id2 exper
 	
 	// Figure out experience variable
 	// Resolve duplicates in terms of id2 syear by taking the observation with more experiences
-	gsort syear id2 -exper // -exper sorts in descending order
-	gen keep_exper_obs = (syear != syear[_n-1] | id2 != id2[_n-1]) // flag observations with the most experience
-	keep if keep_exper_obs // keep only these observations
-	drop keep_exper_obs 
+	gsort id2 syear -daysemp -fte
+	by id2 syear: keep if _n == 1 
 	
 	// Confirm data is unique on id2 syear
 	duplicates report syear id2 // approx 8 million
-	drop id1 // id2 is the correct teachid and has 0 missing observations compared to id1
+	rename id1 teacher_id1
+	lab var teacher_id1 "id1 for teacher (needed to merge with student-teacher links)"
 	destring id2, replace
 	unique id2 // 991,086
 	
@@ -74,7 +73,7 @@ forvalues y = 2000 / $last_year {
 	save "$intermediate/all_teacher", replace 
 
 	
-/*****************Clean certification data (most recent year only needed) ************/
+/*****************Clean certification data (most recent year only needed) ************
 use "E:/projects/2403-Evidence/NewFilesReleased/StBrdEdCert/2023/sbec_final20231031", clear
 drop if id2 == ""
 gen cert_year = year(cert_effective_dt)
@@ -118,12 +117,22 @@ destring id2, replace
 
 duplicates drop
 
-keep id2 first_cert_year first_issdate tier1 tier2 tier3 
+keep id2 first_cert_year first_issdate tier1 tier2 tier3 cert_standard cert_alt cert_other
 
+// Added by Alejandra Salazar 12/16/2025 to confirm data is unique on id2 
+duplicates report id2 // 5 million dups
+unique id2 tier1 tier2 tier3 first_cert_year first_issdate // not unique across all variables 
+duplicates drop 
+duplicates report id2 // now down to 1 million dups 
+foreach var in tier1 tier2 tier3 cert_standard cert_alt cert_other {
+	bys id2: egen max_`var' = max(`var')
+	drop `var'
+}
+duplicates drop
+duplicates report id2 // passed!
 save "$intermediate/certification_2023", replace
 
-
-/***** 3. Clean employee files ///////////////////// */
+***** 3. Clean employee files ///////////////////// */
 use "$intermediate/all_teacher", clear
 merge m:1 id2 using "$intermediate/certification_2023"
 	
@@ -131,13 +140,20 @@ merge m:1 id2 using "$intermediate/certification_2023"
 	duplicates tag syear id2, gen(dups)
 	tab dups, m
 	drop dups
+	
+// Data edits for consistency with other datasets
+rename id2 teachid
+destring district, replace
+destring asian, replace
+destring white, replace
+drop _merge
 
 save "$clean/teacher_background", replace	
 
 /***** 4. Descriptives ///////////////////// */
 // Generate categories for experience and pay - SHOULD EDIT CATEGORY RESTRICTIONS
-gen exper_cat = 1 if (exper <=3) // Novice
-replace exper_cat = 2 if (exper > 3 & exper <=5) // Early Career
-replace exper_cat = 3 if (exper > 5 & exper <=10) // Mid-Career
-replace exper_cat = 4 if (exper > 10) // Experienced
+// gen exper_cat = 1 if (exper <=3) // Novice
+// replace exper_cat = 2 if (exper > 3 & exper <=5) // Early Career
+// replace exper_cat = 3 if (exper > 5 & exper <=10) // Mid-Career
+// replace exper_cat = 4 if (exper > 10) // Experienced
 
