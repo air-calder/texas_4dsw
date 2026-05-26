@@ -13,10 +13,30 @@ capture mkdir "replication/output/checks"
 * ==================== Teacher Background ====================
 use "data/clean/teacher_background.dta", clear
 
-foreach v in id2 syear district campus exper fte totalpay first_cert_year sex degree {
+	* note: we need 2024 data for p_class_roster_staff_wntr to merge fully
+	merge 1:1 teachid district syear using "data/clean/teacher_school_assign.dta", gen(_merge_sch) keep(match master)
+	tab syear _merge_sch
+	
+	* fill in school for non-merges
+	* if you are in the same district as the past or future, and we don't know which school you're at, assume you're in the same school
+	tsset teachid syear
+	destring campus, replace
+	replace campus = L.campus if district == L.district & campus == .
+	replace campus = L2.campus if district == L2.district & campus == .
+	replace campus = L3.campus if district == L3.district & campus == .
+
+	replace campus = F.campus if district == F.district & campus == .
+	replace campus = F2.campus if district == F2.district & campus == .
+	replace campus = F3.campus if district == F3.district & campus == .
+	
+	count if campus == . & syear >= 2017
+	tab syear if campus == .
+
+
+foreach v in teachid syear district campus exper fte totalpay first_cert_year sex degree {
     capture confirm variable `v'
     if _rc {
-        di as error "Missing required variable `v' in data/clean/teacher_background.dta"
+        di as error "Missing required variable `v' in data/clean/teacher_background.dta" 
         exit 459
     }
 }
@@ -32,13 +52,15 @@ gen female = (upper(trim(sex)) == "F") if !missing(sex)
 gen certified = (syear >= first_cert_year) if !missing(syear) & !missing(first_cert_year)
 replace certified = 0 if missing(certified) & !missing(syear)
 
+drop if syear == .
+
 tempfile teacher_panel
 save "`teacher_panel'", replace
 
 * ==================== Treatment Timing ====================
 use "data/clean/yearly_tracker_merge.dta", clear
 
-foreach v in district school_year firstyear ever4DSW post_adoption pct_four Decision {
+foreach v in district school_year firstyear ever4DSW post_adoption pct_four pct_lt4 Decision {
     capture confirm variable `v'
     if _rc {
         di as error "Missing required variable `v' in data/clean/yearly_tracker_merge.dta"
@@ -68,7 +90,7 @@ gen hybrid_calendar = (__decision == "HYBRID") if !missing(__decision)
 replace hybrid_calendar = 0 if __decision == "4DSW"
 drop __decision
 
-collapse (firstnm) firstyear ever4DSW post_adoption pct_four event_time hybrid_calendar, by(district syear)
+collapse (firstnm) firstyear ever4DSW post_adoption pct_four pct_lt4 event_time hybrid_calendar, by(district syear)
 
 tempfile calendar_panel
 save "`calendar_panel'", replace
@@ -97,24 +119,28 @@ keep if _merge == 3
 drop _merge
 gen rural = (District_Urbanicity == "Rural, distant" | District_Urbanicity == "Rural, fringe" | District_Urbanicity == "Rural, remote")
 drop District_Urbanicity year
+destring district, replace
 save "`calendar_panel'", replace
 
 * ==================== Merge Teacher + Treatment ====================
 use "`teacher_panel'", clear
 merge m:1 district syear using "`calendar_panel'"
-quietly count
+tab syear _merge, m
+quietly count if syear >= 2017
 local total_tch = r(N)
-quietly count if _merge != 3
+quietly count if _merge != 3 & syear >= 2017
 local unmatched_tch = r(N)
 if `unmatched_tch' > 0 {
     local pct_tch = string(100 * `unmatched_tch' / `total_tch', "%5.2f")
-    di as text "WARNING: Teacher-calendar merge — `unmatched_tch' of `total_tch' rows unmatched (`pct_tch'%), dropping"
+    di as text "NOTE: Teacher-calendar merge — `unmatched_tch' of `total_tch' rows unmatched (`pct_tch'%), dropping"
 }
 keep if _merge == 3
 drop _merge
 
 * ==================== Classroom Characteristics ====================
-merge 1:1 id2 syear using "replication/output/intermediate/classroom_controls_teacher_year.dta"
+destring teacher_id1, replace
+merge m:1 teacher_id1 syear using "code/4DSW student teacher analysis/replication/output/intermediate/classroom_controls_teacher_year.dta"
+tab syear _merge	
 drop if _merge == 2
 drop _merge
 
@@ -131,7 +157,27 @@ foreach v in class_size class_frpl_share class_nonwhite_share class_prior_ach {
     }
 }
 
-foreach v in id2 syear district campus firstyear ever4DSW post_adoption pct_four event_time hybrid_calendar rural female certified exper totalpay fte {
+* ==================== Teacher Value-Added Merge ====================
+capture confirm file "data/clean/vams_tv.dta"
+if _rc {
+	di as error "Missing file: data/clean/vams_tv.dta"
+	exit 601
+}
+merge m:1 teachid syear using "data/clean/vams_tv.dta", keepusing(tv10 tv22) keep(matched)
+drop if _merge == 2
+drop _merge
+
+* Create average VA across subjects (both non-missing = average, else use available)
+gen teacher_va = (tv10 + tv22) / 2 if !missing(tv10) & !missing(tv22)
+replace teacher_va = tv10 if missing(teacher_va) & !missing(tv10)
+replace teacher_va = tv22 if missing(teacher_va) & !missing(tv22)
+
+* Create VA quartile (no external packages needed)
+egen va_quartile = cut(teacher_va), group(4) label
+
+*----------------------------------------------------------------
+
+foreach v in teachid syear district campus firstyear ever4DSW post_adoption pct_four event_time hybrid_calendar rural female certified exper totalpay fte {
     capture confirm variable `v'
     if _rc {
         di as error "Missing final required variable `v'"
@@ -139,18 +185,19 @@ foreach v in id2 syear district campus firstyear ever4DSW post_adoption pct_four
     }
 }
 
-isid id2 syear
-sort id2 syear
-tsset id2 syear
+isid teachid syear
+sort teachid syear
+tsset teachid syear
 
 * ==================== Panel Construction ====================
 
 * Entrant outcomes from full-panel histories.
+destring degree, replace
 gen is_entrant = (missing(L.syear) | district != L.district)
 gen incoming_from_tx = (is_entrant == 1 & !missing(L.syear) & district != L.district)
 gen incoming_first_time = (is_entrant == 1 & missing(L.syear))
 gen incoming_experience = exper if is_entrant == 1
-gen incoming_alt_path = cert_alt if is_entrant == 1
+gen incoming_alt_path = max_cert_alt if is_entrant == 1
 replace incoming_alt_path = 0 if is_entrant == 1 & missing(incoming_alt_path)
 gen incoming_adv_degree = inlist(degree, 2, 3) if is_entrant == 1 & !missing(degree)
 gen incoming_no_degree = (degree == 0) if is_entrant == 1 & !missing(degree)
@@ -202,11 +249,11 @@ foreach v in is_entrant incoming_from_tx incoming_first_time incoming_alt_path i
     }
 }
 
-sort id2 syear
-save "replication/output/intermediate/teacher_year_analysis.dta", replace
+sort teachid syear
+save "code/4DSW student teacher analysis/replication/output/intermediate/teacher_year_analysis.dta", replace
 
 * Final analysis window.
 keep if inrange(syear, 2017, 2024)
 
-sort id2 syear
-save "replication/output/intermediate/teacher_year_prepared.dta", replace
+sort teachid syear
+save "code/4DSW student teacher analysis/replication/output/intermediate/teacher_year_prepared.dta", replace

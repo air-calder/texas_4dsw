@@ -6,12 +6,12 @@ Fail fast on missing required variables.
 
 version 17
 
-local prepared_data "replication/output/intermediate/teacher_year_prepared.dta"
+local prepared_data "code/4DSW student teacher analysis/replication/output/intermediate/teacher_year_prepared.dta"
 
 use "`prepared_data'", clear
-capture mkdir "replication/output/descriptives"
+capture mkdir "code/4DSW student teacher analysis/replication/output/tables"
 
-foreach v in id2 syear district campus ever4DSW post_adoption event_time rural is_incumbent is_entrant female certified exper totalpay fte degree class_size class_frpl_share stay_school_t1 turnover_teacher_t1 exp_le5 exp_gt9 incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
+foreach v in teachid syear district campus ever4DSW post_adoption event_time rural is_incumbent is_entrant female certified exper totalpay fte degree class_size class_frpl_share stay_school_t1 turnover_teacher_t1 exp_le5 exp_gt9 incoming_from_tx incoming_first_time incoming_alt_path incoming_experience incoming_adv_degree incoming_no_degree {
     capture confirm variable `v'
     if _rc {
         di as error "Missing required variable `v' in `prepared_data'"
@@ -61,7 +61,7 @@ postclose `ph_law1'
 
 use "`lawson_t1'", clear
 sort metric group_id
-export delimited using "replication/output/descriptives/lawson_table1_feasible.csv", replace
+export delimited using "code/4DSW student teacher analysis/replication/output/descriptives/lawson_table1_feasible.csv", replace
 
 * ==================== Lawson Table 2 (feasible subset) ====================
 use "`prepared_data'", clear
@@ -130,14 +130,14 @@ postclose `ph_law2'
 
 use "`lawson_t2'", clear
 sort metric group_id
-export delimited using "replication/output/descriptives/lawson_table2_feasible.csv", replace
+export delimited using "code/4DSW student teacher analysis/replication/output/descriptives/lawson_table2_feasible.csv", replace
 
 * ==================== Khalid Table 1 (feasible subset) ====================
 use "`prepared_data'", clear
 gen male = 1 - female if !missing(female)
 
-sort campus syear id2
-by campus syear id2: gen __tag_teacher = (_n == 1)
+sort campus syear teachid
+by campus syear teachid: gen __tag_teacher = (_n == 1)
 collapse (sum) n_teachers = __tag_teacher (mean) female male certified class_size class_frpl_share, by(campus syear post_adoption)
 
 tempfile khalid_t1
@@ -165,13 +165,13 @@ postclose `ph_kh1'
 
 use "`khalid_t1'", clear
 sort metric group_id
-export delimited using "replication/output/descriptives/khalid_table1_feasible.csv", replace
+export delimited using "code/4DSW student teacher analysis/replication/output/descriptives/khalid_table1_feasible.csv", replace
 
 * ==================== Khalid Table 2 (feasible subset) ====================
 use "`prepared_data'", clear
 
-sort campus syear id2
-by campus syear id2: gen __tag_teacher = (_n == 1)
+sort campus syear teachid
+by campus syear teachid: gen __tag_teacher = (_n == 1)
 gen new_teacher_flag = (is_entrant == 1)
 
 gen prop_retained = stay_school_t1 if is_incumbent == 1
@@ -207,7 +207,7 @@ postclose `ph_kh2'
 
 use "`khalid_t2'", clear
 sort metric group_id
-export delimited using "replication/output/descriptives/khalid_table2_feasible.csv", replace
+export delimited using "code/4DSW student teacher analysis/replication/output/descriptives/khalid_table2_feasible.csv", replace
 
 * ==================== Missing components log ====================
 clear
@@ -221,4 +221,4 @@ input str30 table_id str60 missing_component str80 reason
 "Khalid_EventStudy" "time-varying school controls vector" "Controls from paper not all available in prepared panel"
 end
 
-export delimited using "replication/output/descriptives/prior_lit_descriptive_gaps.csv", replace
+export delimited using "code/4DSW student teacher analysis/replication/output/descriptives/prior_lit_descriptive_gaps.csv", replace
