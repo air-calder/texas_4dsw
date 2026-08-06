@@ -157,6 +157,27 @@ foreach v in class_size class_frpl_share class_nonwhite_share class_prior_ach {
     }
 }
 
+* ==================== Teacher Value-Added Merge ====================
+capture confirm file "data/clean/vams_tv.dta"
+if _rc {
+	di as error "Missing file: data/clean/vams_tv.dta"
+	exit 601
+}
+merge m:1 teacher_id1 syear using "data/clean/vams_tv.dta", keepusing(tv10 tv22)
+tab syear _merge if tv10 != .
+drop if _merge == 2
+drop _merge
+
+* Create average VA across subjects (both non-missing = average, else use available)
+gen teacher_va = (tv10 + tv22) / 2 if !missing(tv10) & !missing(tv22)
+replace teacher_va = tv10 if missing(teacher_va) & !missing(tv10)
+replace teacher_va = tv22 if missing(teacher_va) & !missing(tv22)
+
+* Create VA quartile (no external packages needed)
+egen va_quartile = cut(teacher_va), group(4) label
+
+*----------------------------------------------------------------
+
 foreach v in teachid syear district campus firstyear ever4DSW post_adoption pct_four event_time hybrid_calendar rural female certified exper totalpay fte {
     capture confirm variable `v'
     if _rc {

@@ -27,9 +27,9 @@ foreach y in stay_school_t1 stay_district_t1 switch_district_t1 exit_tx_public_t
     }
 }
 
-local tcontrols "female certified exper totalpay fte"
-local ccontrols "class_size class_frpl_share class_nonwhite_share class_prior_ach"
-local full_controls "`tcontrols' `ccontrols'"
+local tcontrols "female certified exper totalpay fte" // these variables are never missing
+local ccontrols "class_size class_frpl_share class_nonwhite_share class_prior_ach" // these variables are missing for half the data or more... weird because in code file 01 only class_prior_ach is half missing. the others are never or only a few missing. 
+local full_controls "`tcontrols' `ccontrols'" // used in plus_teacher_class_ctrl which i think is why obs drop so much
 
 tempfile results
 tempname posth

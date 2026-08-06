@@ -58,7 +58,7 @@ forvalues y = 20 / 21 {
 }
 
 // 2022 and 2023. we're back to separate files for teacher and student_id1
-forvalues y = 22 / 23 {
+forvalues y = 22 / 24 {
 	
 	di "Starting year 20`y'"
 
@@ -89,7 +89,7 @@ forvalues y = 22 / 23 {
 /* Step 3. Append everything together and make sure variables are consistent across years
 */
 clear
-forvalues y = 15 / 23 {
+forvalues y = 15 / 24 {
 	append using "$intermediate/tch_school_assign_`y'"
 }	
 

@@ -403,8 +403,8 @@ end
 /* **************************************
 /// 1. Read in test scores
 		(a) TAKS (2004-2011) and clean EOG testing in math and reading for grades 3-8.
-************************************** */
-** 2003
+************************************** */ /*
+** 2003 
 		// grade 3
 			* march 2003: grade 3 reading (english version)
 			use "E:\projects\2403-Evidence\NewFilesReleased\TAASandTAKSandSTAAR/2003/taks3_march.dta", clear
@@ -997,7 +997,7 @@ end
 /// 1. Read in test scores
 		(b) STAAR (2012-2023) and clean EOG, alg1, geo, and alg2 testing in math and reading for grades 3-8.
 ************************************** */	
-** 2012:
+// 2012:
 		
 		*g3-8 test scores
 		forvalues g = 3 / 8 {
@@ -1157,7 +1157,7 @@ end
 		display "2014 done"
 	
 
-** 2015:
+// 2015:
 		*g3-8 staar test scores
 		* additional files available for g5 and g8 in may and june
 		forvalues g = 3 / 8 {
@@ -1488,13 +1488,14 @@ end
 		staar_final_clean_three
 		save "$intermediate/stu_test_2022", replace
 		display "2022 done"			
-				
+*/				
 ** 2023:
 		* g3-8 staar test scores
 		* additional files available for g5 and g8 in may and june
 		forvalues g = 3 / 8 {
 		    use "E:\projects\2403-Evidence\NewFilesReleased\TAASandTAKSandSTAAR/2023/staar`g'_may23.dta", clear
-			rename STUDENT_ID1 ID1
+			rename (RLA_SSC STUDENT_ID1 RLA_TESTVER RLA_SCODE) ///
+				(R_SSC ID1 R_TESTVER R_SCODE) 
 			staar_clean
 			tempfile staar_g`g'
 			save `staar_g`g''	
@@ -1521,35 +1522,59 @@ end
 		save "$intermediate/stu_test_2023", replace
 		display "2023 done"
 		
-** 2024 Only December data ?: 
-		* g3-8 staar test scores
-		* additional files available for g5 and g8 in may and june
-		forvalues g = 3 / 8 {
-		    use "E:\projects\2403-Evidence\NewFilesReleased\TAASandTAKSandSTAAR/2023/staar`g'_may23.dta", clear
-			rename STUDENT_ID1 ID1
-			staar_clean
-			tempfile staar_g`g'
-			save `staar_g`g''	
+** 2024: 
+	* g3-8 staar test scores
+	* additional files available for g5 and g8 in may, and june.
+	forvalues g = 3 / 8 {
+		use "E:/projects/235-Math/NewFilesReleased/TAASandTAKSandSTAAR/2024/staar`g'_may24.dta", clear
+		rename (RLA_SSC STUDENT_ID1 RLA_TESTVER RLA_SCODE) (R_SSC ID1 R_TESTVER R_SCODE)
+		staar_clean
+		tempfile staar_g`g'
+		save `staar_g`g''
 		}
 		
-		* EOC alg1 and alg2
-		* No geo datasets available
-		use "E:\projects\2403-Evidence\NewFilesReleased\TAASandTAKSandSTAAR/2023/staareoca1_spr23.dta", clear
-				* additional files available for a1 in dec and june
+	* EOC alg1 
+	* No geo and alg2 datasets available
+		use "E:/projects/235-Math/NewFilesReleased/TAASandTAKSandSTAAR/2024/staareoca1_spr24.dta", clear 
+		replace A1_SSC = . if FTT_RT == "R"
 		rename STUDENT_ID1 ID1
-		clean_eoca1
+		clean_eoca1 
 		tempfile eoc_a1
-		save `eoc_a1'
+		save `eoc_a1'			
+		** add a1 alt files
+		use "E:/projects/235-Math/NewFilesReleased/TAASandTAKSandSTAAR/2024/staareoca1_alt2_apr24.dta", clear
+		rename (STUDENT_ID1) (ID1)
+		clean_eoca1 
+		tempfile eoc_a1_alt
+		save `eoc_a1_alt'	
+		** add a1 jun files 
+		use "E:/projects/235-Math/NewFilesReleased/TAASandTAKSandSTAAR/2024/staareoca1_jun24.dta", clear
+		replace A1_SSC = . if FTT_RT == "R"
+		rename STUDENT_ID1 id1
+		clean_eoca1
+		tempfile eoc_a1_jun
+		save `eoc_a1_jun'	
+		** add a1 dec files 
+		use "E:/projects/235-Math/NewFilesReleased/TAASandTAKSandSTAAR/2024/staareoca1_dec23.dta", clear
+		replace A1_SSC = . if FTT_RT == "R"
+		rename STUDENT_ID1 id1
+		clean_eoca1
+		tempfile eoc_a1_dec
+		save `eoc_a1_dec'
+	
+	// Append all together for the whole school year
+		clear
+		forvalues g = 3 / 8 {
+			append using `staar_g`g''
+			}
+		append using `eoc_a1'
+		append using `eoc_a1_alt'
+		append using `eoc_a1_jun'
+		append using `eoc_a1_dec'
 		
-				clear
-				forvalues g = 3 / 8 {
-							append using `staar_g`g''
-							}
-				append using `eoc_a1'
-				generate schoolyear = 2023
-				
-		// Final clean and save	
-		staar_final_clean_three
-		save "$intermediate/stu_test_2023", replace
-		display "2023 done"		
+	// Final cleaning and save
+	generate schoolyear = 2024
+	staar_final_clean_three
+	save "$intermediate/stu_test_2024", replace
+	display "2024 done"		
 		

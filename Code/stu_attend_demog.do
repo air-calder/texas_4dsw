@@ -102,7 +102,7 @@ forvalues y = 2000 / $last_year {
 	tab syear
 	
 	duplicates report id1 syear
-	assert r(N) == r(unique_value) /// this will fail if more than 1 observation per year per student
+	assert r(N) == r(unique_value) // passed!
 	replace id1 = trim(id1)
 	replace district = trim(district)
 	

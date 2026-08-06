@@ -38,17 +38,14 @@ global clean "E:/projects/2403-Evidence/project/data/clean"
 		}
 		
 		// Save
+		count if m_testgrade == .
+		count if r_testgrade == .
 		display "`g' done"
 		save "$intermediate/stu_test_`g'_clean", replace
 		}
 		
-	forvalues g = 2021 / 2023 {
+	forvalues g = 2021 / 2024 {
 	    use "$intermediate/stu_test_`g'", clear
-		
-			// If it is 2023, drop existing previous score variables
-			if `g' == 2023 {
-			    drop r_sscore_spr22
-				}
 			
 			// Data check
 			qui duplicates report id1
@@ -56,16 +53,15 @@ global clean "E:/projects/2403-Evidence/project/data/clean"
 			
 			// Generate SY and desired standardized scores
 			gen schoolyear = `g'
-				// Reading scores are missing for 2023
-				if `g' != 2023 {
-						egen r_ssc_std = std(r_ssc)
-				}
+			egen r_ssc_std = std(r_ssc)
 			egen m_ssc_std = std(m_ssc)
 			egen a1_ssc_std = std(a1_ssc)
 			capture egen ge_ssc_std = std(ge_ssc) // not always available 
 			capture egen a2_ssc_std = std(a2_ssc) // not always available
 			
 			// Save
+			count if m_testgrade == .
+			count if r_testgrade == .
 			display "`g' done"
 			save "$intermediate/stu_test_`g'_clean", replace
 		}
@@ -75,7 +71,7 @@ global clean "E:/projects/2403-Evidence/project/data/clean"
 			forvalues g = 2003 / 2019 {
 			    append using "$intermediate/stu_test_`g'_clean"
 				}
-			forvalues g = 2021 / 2023 {
+			forvalues g = 2021 / 2024 {
 			    append using "$intermediate/stu_test_`g'_clean"
 				}	
 				

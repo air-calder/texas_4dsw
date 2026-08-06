@@ -20,37 +20,8 @@ Step 1: With subject constraints
 ****************************************************************************/
 // Load student teacher links data
 use "$clean/stu_tch_links", clear
-egen total_ids = count(id1_num)
-local group_size = total_ids / 4
-list id1_num in `group_size'
-list id1_num in `= 2 * `group_size''
-list id1_num in `= 3 * `group_size''
 
-gen group = ceil(_n / `group_size')
-
-forvalues i = 1 / 4 {
-	preserve
-	keep if group == `i'
-	save "$clean/stu_tch_links_idsgroup`i'", replace
-	restore
-}
-
-use "$clean/stu_tch_links", clear
-		keep if id1_num<=5694176
-		save "$clean/stu_tch_links_idsgroup1", replace
-use "$clean/stu_tch_links", clear
-		keep if id1_num>5694176 & id1_num<=13697170
-		save "$clean/stu_tch_links_idsgroup2", replace
-use "$clean/stu_tch_links", clear
-		keep if id1_num>13697170 & id1_num<=17100743 
-		save "$clean/stu_tch_links_idsgroup3", replace
-use "$clean/stu_tch_links", clear
-		keep if id1_num>17100743
-		save "$clean/stu_tch_links_idsgroup4", replace	
-	
-forval i = 1 / 4 {
-    use "$clean/stu_tch_links_idsgroup`i'", clear
-		//Drop if missing student ID
+	// Drop if id1 is missing
 	drop if mi(id1)
 
 	// Class size restrictions
@@ -142,18 +113,15 @@ forval i = 1 / 4 {
 	compress
 	memory
 
-save "$clean/stu_tch_merged_idsgroup`i'", replace
-}		
+save "$clean/stu_tch_merged", replace		
 
-// Add additional variables needed for VAMs.
-// loop over the three datasets
-forval i = 1 / 4 {
-use "$clean/stu_tch_merged_idsgroup`i'", clear
+// Add additional variables needed for VAMs from student data 
+use "$clean/stu_tch_merged", clear
 destring campus, replace
-merge m:1 id1 syear using "$clean/student_merged_idsgroup`i'"
-	drop if _merge==1
-	drop if _merge==2  
-
+merge m:1 id1 syear using "$clean/student_merged"
+drop if _merge==1
+drop if _merge==2  
+compress
 
 // Create "test" variable that is the standardized math score if subject is math (10) and the standardized ela score if subject is ela (22)
 gen test = m_ssc_std
@@ -161,7 +129,7 @@ replace test = r_ssc_std if subject == "22"
 
 // Level or "lvl" is an indicator at the student level for whether their grade is 6 or higher
 gen level = 1
-replace level = 2 if inlist(grade, 6, 7, 8, 9, 10, 11, 12)
+replace level = 2 if inlist(grade, "6", "7", "8", "9", "10", "11", "12")
 
 // Generate broken down race variables
 drop amer_ind_alask asian black_african_amer hawaiian_pac_islander white hisp_latino
@@ -170,9 +138,7 @@ gen black = race == 3
 gen hispanic = race == 4
 gen asian = race == 2
 gen other = race == 1
-
 compress
-memory
 
 // Classroom menas, classx = classroom means
 sort campus syear teachid section_id
@@ -187,14 +153,15 @@ destring teachid, replace
 // Drop variables we don't need, most of these are empty.
 drop id2 id1_num invalid_id1_flag state_assigned_flag sex ethnic ada_eligible lep_language lep_permission economic at_risk title1  bilingual esl  voced_stat immigrant dtupdate date_update migrant_ind over_report even_start attribution as_of_status pk_military bil_pgm esl_pgm pk_foster crisis_ind campus_accnt campus_accnt_rpt ethnic_old eth_race unsch_asyl_ref homeless_status unaccomp_youth early_reading tstem_ind echs_ind iep_continuer_ind fhsp_college_instr_ind dup_id student_lang_cd assoc_degree_ind star_of_tx_ind p_tech_ind interv_strategy_ind sect_504_ind alt_lang_pgm new_tech_ind foster_care military_connect parent_req_rtn_ind district_attend bil_esl_attend gifted_attend pep_attend preg_rl_attend se_attend ve_attend pct_attend att_mult_cmptype src_campus_acc disability_flag mult_disabled_flag discipline_flag title1_flag lep_attend ood_campus_accnt ood_district_accnt ood_mult_cmptype ood_src_campus_acc last_enroll_date fhsp_college_inst_ind dyslexia_risk_cd pk_elig_py_ind adult_prev_attend_ind gen_ed_homebnd_ind dyslexia_ind dyslexia_scr_exc_rsn r_ssc m_ssc a1_ssc a2_ssc ge_ssc prior_r_ssc prior_m_ssc id lag_pct_attend lag2_pct_attend lag3_pct_attend _merge
 
-save "$clean/vam_data_idsgroup`i'", replace
-}
+// Final save 
+compress
+destring grade, replace
+count if grade == . // 0
+save "$clean/vam_data", replace
+stop 
 
-/******************************Apppend groups 1-4 and save.*****************/
-use "$clean/vam_data_idsgroup1", clear
-append using "$clean/vam_data_idsgroup2" "$clean/vam_data_idsgroup3" "$clean/vam_data_idsgroup4"
-save "$clean/vam_data_all", replace
-
+// unable to save the unrestricted dataset below since it would be 130 million KB
+// re-evalutate the code process below later
 /*****************************************************************************
 Step 2: Without subject constraints
 ******************************************************************************/

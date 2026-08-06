@@ -22,7 +22,6 @@ local codedirectory "E:/projects/2403-Evidence/project/code/4DSW student teacher
 local run_stamp = subinstr("`c(current_date)'", " ", "", .)
 log using "code/4DSW student teacher analysis/replication/output/logs/master_`run_stamp'.log", text replace
 
-// if there is no error commented then the code file ran successfully
 foreach f in "01_build_classroom_controls_teacher_year.do" ///
 			"02a_teacher_school_crosswalk.do" ///
 			"02_build_teacher_year_prepared.do" ///
@@ -33,11 +32,12 @@ foreach f in "01_build_classroom_controls_teacher_year.do" ///
 			"07_teacher_entrant_sorting_main.do" ///
 			"08_teacher_entrant_eventstudy.do" ///
 			"09_teacher_robustness.do" /// 
-			"10_tables_figures_teacher.do" /// we don't have the data in lines 44-60. commented out for now
-			"11_unavailable_analyses_tally.do" ///
-			"12_teacher_csdid.do" /// error after line 94: Units always treated found. These will be excluded. panels are not nested within clusters. csdid failed for outcome stay_school_t1 with anticipation(0)
-			"13_prior_lit_descriptives_feasible.do" /// we dont have any of the lawson or khalid dta's required in this code file 
-			"14_teacher_retention_quartiles" ///
+			"15_teacher_retention_by_va.do" /// 
+			"10_tables_figures_teacher.do" /// 
+			"11_unavailable_analyses_tally.do" ///"12_teacher_csdid.do" /// 
+			"13_prior_lit_descriptives_feasible.do" ///
+			"14_teacher_retention_quartiles" /// <-- editting
+			"16_plot_dose_response.do" ///
 			"checks/01_data_integrity.do" /// 
 			"checks/02_pretrend_checks.do" { 
     local fullpath "`codedirectory'/`f'"
@@ -53,5 +53,3 @@ foreach f in "01_build_classroom_controls_teacher_year.do" ///
 
 di as result "Replication pipeline completed successfully."
 log close
-
-// FERPA update all code files except after code file 10
